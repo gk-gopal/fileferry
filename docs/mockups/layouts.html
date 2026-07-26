@@ -1,0 +1,433 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Conduit — Layout Options</title>
+<style>
+  :root {
+    --bg: #f6f6f7;
+    --panel: #ffffff;
+    --panel-2: #fbfbfc;
+    --ink: #1c1c1e;
+    --ink-2: #6b6b70;
+    --ink-3: #9a9aa0;
+    --line: #dededf;
+    --line-2: #ebebec;
+    --accent: #2f6feb;
+    --accent-soft: #e8f0fe;
+    --good: #1a7f45;
+    --bad: #b3261e;
+    --chrome: #eeeef0;
+    --sel: #d9e6fd;
+    --radius: 10px;
+    --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #17171a;
+      --panel: #202024;
+      --panel-2: #26262b;
+      --ink: #f2f2f4;
+      --ink-2: #a6a6ae;
+      --ink-3: #74747c;
+      --line: #35353c;
+      --line-2: #2c2c32;
+      --accent: #5b8dff;
+      --accent-soft: #1f2b47;
+      --good: #4ac47c;
+      --bad: #ff6b60;
+      --chrome: #2a2a30;
+      --sel: #2b3d63;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    padding: 40px 24px 80px;
+    background: var(--bg);
+    color: var(--ink);
+    font: 15px/1.55 -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  .wrap { max-width: 1080px; margin: 0 auto; }
+  header { margin-bottom: 40px; }
+  h1 { font-size: 26px; margin: 0 0 8px; letter-spacing: -0.02em; }
+  .sub { color: var(--ink-2); font-size: 15px; margin: 0; max-width: 68ch; }
+  .q {
+    margin: 24px 0 0; padding: 14px 16px;
+    background: var(--accent-soft); border-radius: var(--radius);
+    font-weight: 550; color: var(--ink);
+  }
+
+  .opt { margin: 44px 0 0; }
+  .opt-head { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; margin-bottom: 4px; }
+  .badge {
+    font: 600 12px/1 var(--mono); letter-spacing: .06em;
+    padding: 5px 8px; border-radius: 6px;
+    background: var(--chrome); color: var(--ink-2); text-transform: uppercase;
+  }
+  .badge.rec { background: var(--accent); color: #fff; }
+  h2 { font-size: 19px; margin: 0; letter-spacing: -0.01em; }
+  .opt-note { color: var(--ink-2); font-size: 14px; margin: 6px 0 16px; max-width: 74ch; }
+
+  /* ---- window chrome ---- */
+  .win {
+    border: 1px solid var(--line); border-radius: var(--radius);
+    overflow: hidden; background: var(--panel);
+    box-shadow: 0 1px 2px rgba(0,0,0,.05), 0 8px 24px rgba(0,0,0,.05);
+  }
+  .titlebar {
+    display: flex; align-items: center; gap: 8px;
+    padding: 9px 12px; background: var(--chrome);
+    border-bottom: 1px solid var(--line);
+  }
+  .dots { display: flex; gap: 6px; }
+  .dots i { width: 11px; height: 11px; border-radius: 50%; background: var(--line); display: block; }
+  .title { font-size: 12.5px; color: var(--ink-2); font-weight: 550; }
+  .tb-actions { margin-left: auto; display: flex; gap: 6px; }
+
+  .btn {
+    font-size: 12px; padding: 5px 10px; border-radius: 6px;
+    background: var(--panel); border: 1px solid var(--line); color: var(--ink);
+    white-space: nowrap;
+  }
+  .btn.p { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .btn.d { color: var(--bad); }
+
+  /* ---- panes ---- */
+  .panes { display: flex; min-height: 300px; }
+  .panes.vert { flex-direction: column; min-height: 380px; }
+  .pane { flex: 1; min-width: 0; display: flex; flex-direction: column; background: var(--panel); }
+  .pane + .pane { border-left: 1px solid var(--line); }
+  .panes.vert .pane + .pane { border-left: none; border-top: 1px solid var(--line); }
+  .pane.focused { background: var(--panel); }
+  .pane.focused .pane-head { background: var(--accent-soft); }
+
+  .pane-head {
+    display: flex; align-items: center; gap: 8px;
+    padding: 7px 10px; background: var(--panel-2);
+    border-bottom: 1px solid var(--line-2);
+    font-size: 12px; color: var(--ink-2);
+  }
+  .pane-head .who { font-weight: 650; color: var(--ink); }
+  .crumb { font: 11.5px/1 var(--mono); color: var(--ink-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .free { margin-left: auto; font-size: 11px; color: var(--ink-3); white-space: nowrap; }
+
+  table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+  th {
+    text-align: left; font-weight: 550; font-size: 11px; color: var(--ink-3);
+    padding: 5px 10px; border-bottom: 1px solid var(--line-2); background: var(--panel-2);
+    position: sticky; top: 0;
+  }
+  td { padding: 4.5px 10px; border-bottom: 1px solid var(--line-2); color: var(--ink); white-space: nowrap; }
+  td.n { width: 52%; overflow: hidden; text-overflow: ellipsis; }
+  td.s, th.s { text-align: right; color: var(--ink-2); font-variant-numeric: tabular-nums; }
+  td.d, th.d { color: var(--ink-3); }
+  tr.sel td { background: var(--sel); }
+  .ico { display: inline-block; width: 15px; }
+
+  /* ---- centre action column ---- */
+  .actcol {
+    width: 74px; flex: 0 0 74px;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 8px; background: var(--panel-2);
+    border-left: 1px solid var(--line); border-right: 1px solid var(--line);
+  }
+  .act {
+    width: 54px; padding: 7px 0; text-align: center;
+    font-size: 11px; font-weight: 600; border-radius: 7px;
+    background: var(--panel); border: 1px solid var(--line); color: var(--ink);
+    line-height: 1.25;
+  }
+  .act.p { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .act.m { color: var(--bad); }
+  .act .ar { display: block; font-size: 15px; line-height: 1; margin-bottom: 1px; }
+  .actcol .rule { width: 34px; height: 1px; background: var(--line); margin: 2px 0; }
+
+  /* ---- transfer bar ---- */
+  .xfer {
+    border-top: 1px solid var(--line); background: var(--panel-2);
+    padding: 8px 12px; display: flex; align-items: center; gap: 10px; font-size: 12px;
+  }
+  .bar { flex: 1; height: 6px; border-radius: 3px; background: var(--line); overflow: hidden; min-width: 60px; }
+  .bar i { display: block; height: 100%; width: 62%; background: var(--accent); }
+  .xfer .meta { color: var(--ink-2); font-variant-numeric: tabular-nums; white-space: nowrap; font-size: 11.5px; }
+  .xfer .nm { font-weight: 550; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 180px; }
+
+  /* ---- pros cons ---- */
+  .pc { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 14px; }
+  .pc div { padding: 12px 14px; border-radius: 8px; background: var(--panel); border: 1px solid var(--line); }
+  .pc h4 { margin: 0 0 7px; font-size: 11px; letter-spacing: .07em; text-transform: uppercase; color: var(--ink-3); }
+  .pc ul { margin: 0; padding-left: 17px; font-size: 13.5px; color: var(--ink-2); }
+  .pc li { margin-bottom: 4px; }
+  .pc li:last-child { margin: 0; }
+  .pc .pros li::marker { color: var(--good); }
+  .pc .cons li::marker { color: var(--bad); }
+
+  .fine { font-size: 13px; color: var(--ink-2); margin-top: 34px; padding-top: 20px; border-top: 1px solid var(--line); }
+  .fine strong { color: var(--ink); }
+  @media (max-width: 720px) {
+    .pc { grid-template-columns: 1fr; }
+    .panes { flex-direction: column; }
+    .pane + .pane { border-left: none; border-top: 1px solid var(--line); }
+    .actcol { width: auto; flex: 0 0 auto; flex-direction: row; padding: 8px; border: none; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+    .actcol .rule { width: 1px; height: 24px; margin: 0 2px; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <h1>Conduit — three dual-pane layouts</h1>
+  <p class="sub">Same underlying app in all three: a Mac folder on one side, a phone folder on the other, copy and move in both directions, no history kept. What differs is how you express <em>direction</em> — and since a move deletes the original, direction being unambiguous is a safety property, not just a convenience.</p>
+  <p class="q">Which of these feels like "copying or moving between 2 folders" to you?</p>
+</header>
+
+
+<!-- ===================== OPTION A ===================== -->
+<section class="opt">
+  <div class="opt-head">
+    <span class="badge">Option A</span>
+    <h2>Side by side, actions in the toolbar</h2>
+  </div>
+  <p class="opt-note">The familiar shape — Transmit, ForkLift, OpenMTP. Direction comes from which pane has focus: the toolbar acts <em>from</em> the focused pane <em>to</em> the other one. Maximum room for files.</p>
+
+  <div class="win">
+    <div class="titlebar">
+      <span class="dots"><i></i><i></i><i></i></span>
+      <span class="title">Conduit — Pixel 8</span>
+      <span class="tb-actions">
+        <span class="btn p">Copy →</span>
+        <span class="btn">Move →</span>
+        <span class="btn">New Folder</span>
+        <span class="btn d">Delete</span>
+      </span>
+    </div>
+    <div class="panes">
+      <div class="pane focused">
+        <div class="pane-head">
+          <span class="who">Mac</span>
+          <span class="crumb">~/Downloads</span>
+          <span class="free">184 GB free</span>
+        </div>
+        <table>
+          <thead><tr><th>Name</th><th class="s">Size</th><th class="d">Modified</th></tr></thead>
+          <tbody>
+            <tr><td class="n"><span class="ico">📁</span> invoices</td><td class="s">—</td><td class="d">12 Jul</td></tr>
+            <tr class="sel"><td class="n"><span class="ico">📄</span> contract-final.pdf</td><td class="s">2.4 MB</td><td class="d">24 Jul</td></tr>
+            <tr class="sel"><td class="n"><span class="ico">🗜</span> photos-backup.zip</td><td class="s">1.2 GB</td><td class="d">24 Jul</td></tr>
+            <tr><td class="n"><span class="ico">🎬</span> screencast.mov</td><td class="s">840 MB</td><td class="d">25 Jul</td></tr>
+            <tr><td class="n"><span class="ico">📄</span> notes.txt</td><td class="s">4 KB</td><td class="d">26 Jul</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="pane">
+        <div class="pane-head">
+          <span class="who">Pixel 8</span>
+          <span class="crumb">/sdcard/Download</span>
+          <span class="free">41 GB free</span>
+        </div>
+        <table>
+          <thead><tr><th>Name</th><th class="s">Size</th><th class="d">Modified</th></tr></thead>
+          <tbody>
+            <tr><td class="n"><span class="ico">📁</span> Telegram</td><td class="s">—</td><td class="d">03 Jun</td></tr>
+            <tr><td class="n"><span class="ico">🖼</span> IMG_2033.jpg</td><td class="s">3.9 MB</td><td class="d">24 Jul</td></tr>
+            <tr><td class="n"><span class="ico">📄</span> boarding-pass.pdf</td><td class="s">210 KB</td><td class="d">25 Jul</td></tr>
+            <tr><td class="n"><span class="ico">🎵</span> podcast-ep42.mp3</td><td class="s">58 MB</td><td class="d">26 Jul</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+    <div class="xfer">
+      <span class="nm">photos-backup.zip</span>
+      <span class="bar"><i></i></span>
+      <span class="meta">62% · 78 MB/s · 4s left</span>
+      <span class="btn">Cancel</span>
+    </div>
+  </div>
+
+  <div class="pc">
+    <div class="pros"><h4>Pros</h4><ul>
+      <li>Widest file panes — most rows and longest names visible</li>
+      <li>Instantly familiar to anyone who has used an FTP client</li>
+      <li>Drag between panes still works for people who prefer it</li>
+    </ul></div>
+    <div class="cons"><h4>Cons</h4><ul>
+      <li>Direction depends on <em>focus</em>, which is a subtle visual cue</li>
+      <li>"Move →" with the wrong pane focused deletes the wrong original</li>
+      <li>Toolbar labels must flip as focus changes, or they lie</li>
+    </ul></div>
+  </div>
+</section>
+
+
+<!-- ===================== OPTION B ===================== -->
+<section class="opt">
+  <div class="opt-head">
+    <span class="badge rec">Option B · recommended</span>
+    <h2>Side by side with a centre action column</h2>
+  </div>
+  <p class="opt-note">Four explicit buttons sit between the panes. Each one names its own direction, so there is no focused-pane rule to learn and no way to misread which way a move is about to go. Costs about 74px of width.</p>
+
+  <div class="win">
+    <div class="titlebar">
+      <span class="dots"><i></i><i></i><i></i></span>
+      <span class="title">Conduit — Pixel 8</span>
+      <span class="tb-actions">
+        <span class="btn">New Folder</span>
+        <span class="btn">Refresh</span>
+        <span class="btn d">Delete</span>
+      </span>
+    </div>
+    <div class="panes">
+      <div class="pane">
+        <div class="pane-head">
+          <span class="who">Mac</span>
+          <span class="crumb">~/Downloads</span>
+          <span class="free">184 GB free</span>
+        </div>
+        <table>
+          <thead><tr><th>Name</th><th class="s">Size</th></tr></thead>
+          <tbody>
+            <tr><td class="n"><span class="ico">📁</span> invoices</td><td class="s">—</td></tr>
+            <tr class="sel"><td class="n"><span class="ico">📄</span> contract-final.pdf</td><td class="s">2.4 MB</td></tr>
+            <tr class="sel"><td class="n"><span class="ico">🗜</span> photos-backup.zip</td><td class="s">1.2 GB</td></tr>
+            <tr><td class="n"><span class="ico">🎬</span> screencast.mov</td><td class="s">840 MB</td></tr>
+            <tr><td class="n"><span class="ico">📄</span> notes.txt</td><td class="s">4 KB</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="actcol">
+        <span class="act p"><span class="ar">→</span>Copy</span>
+        <span class="act m"><span class="ar">⇢</span>Move</span>
+        <span class="rule"></span>
+        <span class="act"><span class="ar">←</span>Copy</span>
+        <span class="act m"><span class="ar">⇠</span>Move</span>
+      </div>
+
+      <div class="pane">
+        <div class="pane-head">
+          <span class="who">Pixel 8</span>
+          <span class="crumb">/sdcard/Download</span>
+          <span class="free">41 GB free</span>
+        </div>
+        <table>
+          <thead><tr><th>Name</th><th class="s">Size</th></tr></thead>
+          <tbody>
+            <tr><td class="n"><span class="ico">📁</span> Telegram</td><td class="s">—</td></tr>
+            <tr><td class="n"><span class="ico">🖼</span> IMG_2033.jpg</td><td class="s">3.9 MB</td></tr>
+            <tr><td class="n"><span class="ico">📄</span> boarding-pass.pdf</td><td class="s">210 KB</td></tr>
+            <tr><td class="n"><span class="ico">🎵</span> podcast-ep42.mp3</td><td class="s">58 MB</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+    <div class="xfer">
+      <span class="nm">photos-backup.zip</span>
+      <span class="bar"><i></i></span>
+      <span class="meta">62% · 78 MB/s · 4s left</span>
+      <span class="btn">Cancel</span>
+    </div>
+  </div>
+
+  <div class="pc">
+    <div class="pros"><h4>Pros</h4><ul>
+      <li>Direction is stated on the button, never inferred — the safety win</li>
+      <li>Copy and move are visibly different actions, move tinted red</li>
+      <li>Nothing to discover; a first-time user cannot get it wrong</li>
+      <li>Buttons grey out when the source selection is empty</li>
+    </ul></div>
+    <div class="cons"><h4>Cons</h4><ul>
+      <li>Eats ~74px that could have gone to filenames</li>
+      <li>Slightly utilitarian look — less like a modern Mac app</li>
+      <li>Four buttons is more chrome than a single toolbar pair</li>
+    </ul></div>
+  </div>
+</section>
+
+
+<!-- ===================== OPTION C ===================== -->
+<section class="opt">
+  <div class="opt-head">
+    <span class="badge">Option C</span>
+    <h2>Stacked — Mac above, phone below</h2>
+  </div>
+  <p class="opt-note">Same two folders, rotated. Each pane gets the window's full width, so long filenames and extra columns fit comfortably. The trade is vertical: each list shows roughly half as many rows.</p>
+
+  <div class="win">
+    <div class="titlebar">
+      <span class="dots"><i></i><i></i><i></i></span>
+      <span class="title">Conduit — Pixel 8</span>
+      <span class="tb-actions">
+        <span class="btn p">↓ Copy to Phone</span>
+        <span class="btn">↑ Copy to Mac</span>
+        <span class="btn d">Delete</span>
+      </span>
+    </div>
+    <div class="panes vert">
+      <div class="pane">
+        <div class="pane-head">
+          <span class="who">Mac</span>
+          <span class="crumb">~/Downloads</span>
+          <span class="free">184 GB free</span>
+        </div>
+        <table>
+          <thead><tr><th>Name</th><th class="s">Size</th><th class="d">Modified</th><th class="d">Kind</th></tr></thead>
+          <tbody>
+            <tr class="sel"><td class="n"><span class="ico">📄</span> contract-final.pdf</td><td class="s">2.4 MB</td><td class="d">24 Jul 2026</td><td class="d">PDF document</td></tr>
+            <tr class="sel"><td class="n"><span class="ico">🗜</span> photos-backup.zip</td><td class="s">1.2 GB</td><td class="d">24 Jul 2026</td><td class="d">ZIP archive</td></tr>
+            <tr><td class="n"><span class="ico">🎬</span> screencast.mov</td><td class="s">840 MB</td><td class="d">25 Jul 2026</td><td class="d">QuickTime movie</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="pane">
+        <div class="pane-head">
+          <span class="who">Pixel 8</span>
+          <span class="crumb">/sdcard/Download</span>
+          <span class="free">41 GB free</span>
+        </div>
+        <table>
+          <thead><tr><th>Name</th><th class="s">Size</th><th class="d">Modified</th><th class="d">Kind</th></tr></thead>
+          <tbody>
+            <tr><td class="n"><span class="ico">🖼</span> IMG_2033.jpg</td><td class="s">3.9 MB</td><td class="d">24 Jul 2026</td><td class="d">JPEG image</td></tr>
+            <tr><td class="n"><span class="ico">📄</span> boarding-pass.pdf</td><td class="s">210 KB</td><td class="d">25 Jul 2026</td><td class="d">PDF document</td></tr>
+            <tr><td class="n"><span class="ico">🎵</span> podcast-ep42.mp3</td><td class="s">58 MB</td><td class="d">26 Jul 2026</td><td class="d">MP3 audio</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+    <div class="xfer">
+      <span class="nm">photos-backup.zip</span>
+      <span class="bar"><i></i></span>
+      <span class="meta">62% · 78 MB/s · 4s left</span>
+      <span class="btn">Cancel</span>
+    </div>
+  </div>
+
+  <div class="pc">
+    <div class="pros"><h4>Pros</h4><ul>
+      <li>Full-width lists — room for Kind, Modified, long names</li>
+      <li>"Down to phone / up to Mac" is a clear spatial metaphor</li>
+      <li>Works well on a narrow window</li>
+    </ul></div>
+    <div class="cons"><h4>Cons</h4><ul>
+      <li>Halves visible rows — worst fit for a 13" laptop, which is wide and short</li>
+      <li>Comparing two folders means looking up and down, not across</li>
+      <li>Scrolling a long folder pushes the other pane out of mind</li>
+    </ul></div>
+  </div>
+</section>
+
+
+<p class="fine">
+  <strong>Why I lean B.</strong> Everything else here is taste, but move deletes the original once the copy verifies, and A's direction rule is "whichever pane you last clicked." That's a fine rule for copying and a bad one for deleting. B spends 74 pixels to make the direction impossible to misread. If you'd rather have the pixels, A plus a confirmation sheet on every move gets to a similar place — just with a dialog you'll learn to dismiss without reading.
+  <br><br>
+  <strong>Not shown:</strong> the single-pane design I suggested earlier, where only the phone appears and the Mac side is a Finder window you drag to. Your "like copying or moving between 2 folders" rules it out — it makes the Mac folder invisible and move awkward.
+</p>
+
+</div>
+</body>
+</html>

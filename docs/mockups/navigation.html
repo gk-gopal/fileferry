@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Conduit — Navigation &amp; Refresh</title>
+<style>
+  :root {
+    --bg:#f6f6f7; --panel:#fff; --panel-2:#fbfbfc; --ink:#1c1c1e; --ink-2:#6b6b70;
+    --ink-3:#9a9aa0; --line:#dededf; --line-2:#ebebec; --accent:#2f6feb;
+    --accent-soft:#e8f0fe; --good:#1a7f45; --bad:#b3261e; --chrome:#eeeef0;
+    --sel:#d9e6fd; --note:#8a5a00; --note-bg:#fff6e0; --radius:10px;
+    --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg:#17171a; --panel:#202024; --panel-2:#26262b; --ink:#f2f2f4; --ink-2:#a6a6ae;
+      --ink-3:#74747c; --line:#35353c; --line-2:#2c2c32; --accent:#5b8dff;
+      --accent-soft:#1f2b47; --good:#4ac47c; --bad:#ff6b60; --chrome:#2a2a30;
+      --sel:#2b3d63; --note:#e8c07a; --note-bg:#2e2718;
+    }
+  }
+  *{box-sizing:border-box}
+  body{margin:0;padding:40px 24px 80px;background:var(--bg);color:var(--ink);
+    font:15px/1.55 -apple-system,BlinkMacSystemFont,system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+  .wrap{max-width:1000px;margin:0 auto}
+  h1{font-size:26px;margin:0 0 8px;letter-spacing:-.02em}
+  .sub{color:var(--ink-2);margin:0 0 34px;max-width:70ch}
+  h2{font-size:19px;margin:44px 0 4px;letter-spacing:-.01em}
+  .lede{color:var(--ink-2);font-size:14px;margin:0 0 16px;max-width:74ch}
+
+  .win{border:1px solid var(--line);border-radius:var(--radius);overflow:hidden;
+    background:var(--panel);box-shadow:0 1px 2px rgba(0,0,0,.05),0 8px 24px rgba(0,0,0,.05)}
+
+  /* pane header anatomy */
+  .hdr{display:flex;align-items:center;gap:7px;padding:8px 10px;background:var(--panel-2);
+    border-bottom:1px solid var(--line-2);font-size:12.5px;flex-wrap:wrap}
+  .navbtn{width:24px;height:24px;border-radius:6px;border:1px solid var(--line);background:var(--panel);
+    display:inline-flex;align-items:center;justify-content:center;color:var(--ink-2);font-size:12px;flex:none}
+  .navbtn.off{color:var(--ink-3);opacity:.45}
+  .who{font-weight:650;padding:3px 7px;border-radius:6px;background:var(--accent-soft);color:var(--ink);flex:none}
+  .crumbs{display:flex;align-items:center;gap:2px;font:12px/1 var(--mono);min-width:0;flex-wrap:wrap}
+  .crumbs a{color:var(--accent);text-decoration:none;padding:3px 4px;border-radius:4px}
+  .crumbs .cur{color:var(--ink);font-weight:650;padding:3px 4px}
+  .crumbs .sep{color:var(--ink-3)}
+  .caret{color:var(--ink-2);font-size:9px;margin-left:1px}
+  .spacer{flex:1;min-width:12px}
+  .free{font-size:11px;color:var(--ink-3);white-space:nowrap}
+
+  /* callouts */
+  .anno{display:grid;grid-template-columns:26px 1fr;gap:10px 12px;margin-top:16px;
+    font-size:13.5px;color:var(--ink-2)}
+  .pin{width:22px;height:22px;border-radius:50%;background:var(--accent);color:#fff;
+    display:flex;align-items:center;justify-content:center;font:600 11px/1 var(--mono)}
+  .anno b{color:var(--ink);font-weight:600}
+  .kbd{font:11px/1 var(--mono);border:1px solid var(--line);border-bottom-width:2px;
+    border-radius:4px;padding:2px 5px;background:var(--panel);color:var(--ink);white-space:nowrap}
+
+  /* dropdown */
+  .dd{position:relative;display:inline-block}
+  .menu{margin-top:8px;width:290px;border:1px solid var(--line);border-radius:9px;background:var(--panel);
+    box-shadow:0 10px 30px rgba(0,0,0,.16);overflow:hidden;font-size:13px}
+  .menu .grp{font:600 10px/1 var(--mono);letter-spacing:.08em;text-transform:uppercase;
+    color:var(--ink-3);padding:9px 12px 5px}
+  .menu .it{padding:6px 12px;display:flex;align-items:center;gap:8px;color:var(--ink)}
+  .menu .it .p{margin-left:auto;font:10.5px/1 var(--mono);color:var(--ink-3)}
+  .menu .it.on{background:var(--accent);color:#fff}
+  .menu .it.on .p{color:#dbe6ff}
+  .menu .div{height:1px;background:var(--line-2);margin:5px 0}
+
+  .two{display:grid;grid-template-columns:1fr 1fr;gap:20px;align-items:start}
+  @media(max-width:800px){.two{grid-template-columns:1fr}}
+
+  table{width:100%;border-collapse:collapse;font-size:12.5px}
+  th{text-align:left;font-weight:550;font-size:11px;color:var(--ink-3);padding:5px 10px;
+    border-bottom:1px solid var(--line-2);background:var(--panel-2)}
+  td{padding:5px 10px;border-bottom:1px solid var(--line-2);white-space:nowrap}
+  td.s{text-align:right;color:var(--ink-2);font-variant-numeric:tabular-nums}
+  tr.sel td{background:var(--sel)}
+  tr.hov td{background:var(--accent-soft);outline:1.5px dashed var(--accent);outline-offset:-2px}
+  .ico{display:inline-block;width:15px}
+
+  .tbl{width:100%;border-collapse:collapse;font-size:13.5px;margin-top:12px}
+  .tbl th{background:var(--panel-2);border-bottom:1px solid var(--line);padding:8px 11px;
+    font-size:11px;letter-spacing:.05em;text-transform:uppercase;color:var(--ink-3)}
+  .tbl td{padding:8px 11px;border-bottom:1px solid var(--line-2);white-space:normal;color:var(--ink-2)}
+  .tbl td:first-child{color:var(--ink);font-weight:550;white-space:nowrap}
+  .tag{font:10px/1 var(--mono);padding:3px 6px;border-radius:4px;background:var(--chrome);color:var(--ink-2)}
+  .tag.live{background:var(--good);color:#fff}
+  .tag.man{background:var(--chrome);color:var(--ink-2)}
+
+  .note{margin-top:16px;padding:12px 14px;border-radius:8px;background:var(--note-bg);
+    color:var(--note);font-size:13.5px;border:1px solid rgba(0,0,0,.06)}
+  .note b{color:var(--note)}
+  .q{margin:40px 0 0;padding:14px 16px;background:var(--accent-soft);border-radius:var(--radius);font-weight:550}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<h1>Choosing a folder, and keeping it fresh</h1>
+<p class="sub">Option B has no sidebar, so every navigation control has to live in the pane header. Here is what that header actually contains, and how the two sides differ.</p>
+
+<!-- ============ ANATOMY ============ -->
+<h2>Anatomy of a pane header</h2>
+<p class="lede">Same six controls on both panes. This is the phone side; the Mac side is identical except where noted.</p>
+
+<div class="win">
+  <div class="hdr">
+    <span class="navbtn off">←</span>
+    <span class="navbtn">→</span>
+    <span class="navbtn">↑</span>
+    <span class="who">Pixel 8 <span class="caret">▼</span></span>
+    <span class="crumbs">
+      <a>/sdcard</a><span class="sep">›</span><a>DCIM</a><span class="sep">›</span><span class="cur">Camera</span>
+    </span>
+    <span class="spacer"></span>
+    <span class="free">41 GB free · 1,284 items</span>
+    <span class="navbtn">⟳</span>
+  </div>
+  <table>
+    <thead><tr><th>Name</th><th class="s">Size</th><th class="s">Modified</th></tr></thead>
+    <tbody>
+      <tr><td><span class="ico">📁</span> .thumbnails</td><td class="s">—</td><td class="s">12 Mar</td></tr>
+      <tr class="sel"><td><span class="ico">🖼</span> IMG_2033.jpg</td><td class="s">3.9 MB</td><td class="s">24 Jul</td></tr>
+      <tr><td><span class="ico">🎬</span> VID_2031.mp4</td><td class="s">1.8 GB</td><td class="s">21 Jul</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<div class="anno">
+  <span class="pin">1</span><div><b>Back / Forward / Up.</b> Per-pane history, <span class="kbd">⌘[</span> <span class="kbd">⌘]</span> <span class="kbd">⌘↑</span>. Greyed when there's nowhere to go. This is navigation history only — nothing is written to disk.</div>
+  <span class="pin">2</span><div><b>The pane label is a menu.</b> Click "Pixel 8 ▾" for favourites, recent folders, and a folder chooser. Expanded below.</div>
+  <span class="pin">3</span><div><b>Breadcrumbs, every segment clickable.</b> Jump to any ancestor in one click. Right-click a segment for its siblings.</div>
+  <span class="pin">4</span><div><b>Item count and free space</b>, so you know a 1.2 GB copy will fit before you start it.</div>
+  <span class="pin">5</span><div><b>Refresh.</b> <span class="kbd">⌘R</span>. Only ever needed on the phone side — see the table below.</div>
+  <span class="pin">6</span><div><b>Double-click a folder row to enter it</b>, <span class="kbd">⏎</span> to rename, <span class="kbd">Space</span> to Quick Look. Selecting a <em>folder</em> and hitting Copy transfers it recursively.</div>
+</div>
+
+<!-- ============ THE MENU ============ -->
+<h2>The pane menu — where folders get chosen</h2>
+<p class="lede">Two different jobs, so the two sides diverge here. The Mac gets the real Finder picker; the phone gets a curated list plus a path box.</p>
+
+<div class="two">
+  <div>
+    <div class="dd"><div class="menu">
+      <div class="grp">Mac</div>
+      <div class="it">🏠 Home<span class="p">~</span></div>
+      <div class="it on">⬇ Downloads<span class="p">~/Downloads</span></div>
+      <div class="it">🖥 Desktop<span class="p">~/Desktop</span></div>
+      <div class="it">📄 Documents<span class="p">~/Documents</span></div>
+      <div class="div"></div>
+      <div class="grp">Recent</div>
+      <div class="it">📁 photos-2026<span class="p">~/Pictures/…</span></div>
+      <div class="it">📁 client-handoff<span class="p">~/Work/…</span></div>
+      <div class="div"></div>
+      <div class="it">📂 Choose Folder…<span class="p">⌘O</span></div>
+      <div class="it">⌨ Go to Path…<span class="p">⇧⌘G</span></div>
+    </div></div>
+    <p class="lede" style="margin-top:12px"><b>Mac side.</b> "Choose Folder…" opens the standard <span class="kbd">NSOpenPanel</span>, so you inherit Finder's own sidebar, tags, iCloud Drive and external volumes for free. You can also drag a folder from Finder onto the pane to jump there.</p>
+  </div>
+
+  <div>
+    <div class="dd"><div class="menu">
+      <div class="grp">Pixel 8</div>
+      <div class="it">⬇ Download<span class="p">/sdcard/Download</span></div>
+      <div class="it on">📷 Camera<span class="p">/sdcard/DCIM/Camera</span></div>
+      <div class="it">🖼 Pictures<span class="p">/sdcard/Pictures</span></div>
+      <div class="it">🎵 Music<span class="p">/sdcard/Music</span></div>
+      <div class="it">🎬 Movies<span class="p">/sdcard/Movies</span></div>
+      <div class="it">📄 Documents<span class="p">/sdcard/Documents</span></div>
+      <div class="div"></div>
+      <div class="grp">Recent</div>
+      <div class="it">📁 WhatsApp Images<span class="p">/sdcard/…</span></div>
+      <div class="div"></div>
+      <div class="it">⌨ Go to Path…<span class="p">⇧⌘G</span></div>
+      <div class="it">📌 Pin This Folder<span class="p">⌘D</span></div>
+    </div></div>
+    <p class="lede" style="margin-top:12px"><b>Phone side.</b> No system picker exists, so the standard Android folders are hard-coded as a starting point, and anything you visit can be pinned. "Go to Path…" takes a raw path with tab-completion for when you know exactly where you're going.</p>
+  </div>
+</div>
+
+<div class="note">
+  <b>One thing to confirm:</b> favourites, pinned folders, and "reopen the last folder on launch" all mean writing a small amount of state to disk. That's UI convenience, not transfer history — but you did say no history is maintained, so tell me if you'd rather it start cold every launch.
+</div>
+
+<!-- ============ REFRESH ============ -->
+<h2>When each pane refreshes</h2>
+<p class="lede">The asymmetry is unavoidable: macOS pushes filesystem events to us, Android does not.</p>
+
+<table class="tbl">
+  <thead><tr><th>Trigger</th><th>Mac pane</th><th>Phone pane</th></tr></thead>
+  <tbody>
+    <tr><td>A file changes underneath you</td><td><span class="tag live">instant</span> FSEvents</td><td><span class="tag man">not detected</span></td></tr>
+    <tr><td>You navigate to the folder</td><td><span class="tag live">instant</span></td><td><span class="tag live">&lt;100 ms</span> typical folder</td></tr>
+    <tr><td>Conduit copies / moves / deletes</td><td><span class="tag live">instant</span></td><td><span class="tag live">instant</span> we know what changed</td></tr>
+    <tr><td>Window regains focus</td><td>—</td><td><span class="tag live">re-listed</span> covers "I just took a photo"</td></tr>
+    <tr><td>You press <span class="kbd">⌘R</span></td><td><span class="tag live">instant</span></td><td><span class="tag live">re-listed</span></td></tr>
+    <tr><td>Background polling</td><td>not needed</td><td><span class="tag man">off by default</span> opt-in setting</td></tr>
+    <tr><td>During an active transfer</td><td>normal</td><td><span class="tag man">paused</span> avoids competing for the USB link</td></tr>
+  </tbody>
+</table>
+
+<p class="q">Does this cover it? Open questions for you: (a) should pinned favourites and last-folder persist across launches, or start cold? (b) do you want background polling available at all, even switched off by default?</p>
+
+</div>
+</body>
+</html>

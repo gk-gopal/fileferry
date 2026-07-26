@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Conduit — Option B with sidebars</title>
+<style>
+  :root{
+    --bg:#f6f6f7;--panel:#fff;--panel-2:#fbfbfc;--side:#f1f1f3;--ink:#1c1c1e;--ink-2:#6b6b70;
+    --ink-3:#9a9aa0;--line:#dededf;--line-2:#ebebec;--accent:#2f6feb;--accent-soft:#e8f0fe;
+    --good:#1a7f45;--bad:#b3261e;--chrome:#eeeef0;--sel:#d9e6fd;--radius:10px;
+    --note:#8a5a00;--note-bg:#fff6e0;
+    --mono:ui-monospace,SFMono-Regular,"SF Mono",Menlo,monospace;
+  }
+  @media (prefers-color-scheme:dark){
+    :root{--bg:#17171a;--panel:#202024;--panel-2:#26262b;--side:#1b1b1f;--ink:#f2f2f4;
+    --ink-2:#a6a6ae;--ink-3:#74747c;--line:#35353c;--line-2:#2c2c32;--accent:#5b8dff;
+    --accent-soft:#1f2b47;--good:#4ac47c;--bad:#ff6b60;--chrome:#2a2a30;--sel:#2b3d63;
+    --note:#e8c07a;--note-bg:#2e2718;}
+  }
+  *{box-sizing:border-box}
+  body{margin:0;padding:40px 24px 80px;background:var(--bg);color:var(--ink);
+    font:15px/1.55 -apple-system,BlinkMacSystemFont,system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+  .wrap{max-width:1120px;margin:0 auto}
+  h1{font-size:26px;margin:0 0 8px;letter-spacing:-.02em}
+  .sub{color:var(--ink-2);margin:0 0 12px;max-width:72ch}
+  h2{font-size:19px;margin:46px 0 4px;letter-spacing:-.01em}
+  .lede{color:var(--ink-2);font-size:14px;margin:0 0 16px;max-width:76ch}
+  .badge{font:600 12px/1 var(--mono);letter-spacing:.06em;padding:5px 8px;border-radius:6px;
+    background:var(--chrome);color:var(--ink-2);text-transform:uppercase;margin-right:8px}
+  .badge.rec{background:var(--accent);color:#fff}
+
+  .win{border:1px solid var(--line);border-radius:var(--radius);overflow:hidden;background:var(--panel);
+    box-shadow:0 1px 2px rgba(0,0,0,.05),0 8px 24px rgba(0,0,0,.05)}
+  .titlebar{display:flex;align-items:center;gap:8px;padding:9px 12px;background:var(--chrome);
+    border-bottom:1px solid var(--line)}
+  .dots{display:flex;gap:6px}.dots i{width:11px;height:11px;border-radius:50%;background:var(--line);display:block}
+  .title{font-size:12.5px;color:var(--ink-2);font-weight:550}
+  .tb{margin-left:auto;display:flex;gap:6px;align-items:center}
+  .btn{font-size:11.5px;padding:5px 9px;border-radius:6px;background:var(--panel);
+    border:1px solid var(--line);color:var(--ink);white-space:nowrap}
+  .btn.p{background:var(--accent);border-color:var(--accent);color:#fff}
+  .btn.m{color:var(--bad);border-color:var(--line)}
+  .btn.i{padding:5px 7px;color:var(--ink-2)}
+  .grp{display:flex;gap:0}
+  .grp .btn{border-radius:0;margin-left:-1px}
+  .grp .btn:first-child{border-radius:6px 0 0 6px;margin-left:0}
+  .grp .btn:last-child{border-radius:0 6px 6px 0}
+
+  .body{display:flex;min-height:330px}
+  .sidebar{width:150px;flex:0 0 150px;background:var(--side);border-right:1px solid var(--line);
+    padding:8px 0;font-size:12.5px;overflow:hidden}
+  .sidebar.right{border-right:none;border-left:1px solid var(--line)}
+  .sb-h{font:600 10px/1 var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--ink-3);
+    padding:8px 12px 6px;display:flex;align-items:center;gap:5px}
+  .sb-i{padding:5px 12px;display:flex;align-items:center;gap:7px;color:var(--ink);
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .sb-i.on{background:var(--accent);color:#fff;border-radius:0}
+  .sb-i.drop{background:var(--accent-soft);outline:2px dashed var(--accent);outline-offset:-3px;border-radius:6px;
+    margin:0 6px;padding:5px 6px}
+  .sb-i .e{width:16px;display:inline-block;flex:none}
+  .sb-div{height:1px;background:var(--line);margin:8px 12px}
+  .meter{margin:4px 12px 2px;height:5px;border-radius:3px;background:var(--line);overflow:hidden}
+  .meter i{display:block;height:100%;width:68%;background:var(--accent)}
+  .meter-l{padding:0 12px;font-size:10.5px;color:var(--ink-3)}
+
+  .pane{flex:1;min-width:0;display:flex;flex-direction:column;background:var(--panel)}
+  .hdr{display:flex;align-items:center;gap:6px;padding:7px 10px;background:var(--panel-2);
+    border-bottom:1px solid var(--line-2);font-size:12px}
+  .nb{width:22px;height:22px;border-radius:5px;border:1px solid var(--line);background:var(--panel);
+    display:inline-flex;align-items:center;justify-content:center;color:var(--ink-2);font-size:11px;flex:none}
+  .nb.off{opacity:.4}
+  .crumbs{font:11.5px/1 var(--mono);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .crumbs a{color:var(--accent);text-decoration:none}
+  .crumbs .cur{color:var(--ink);font-weight:650}
+  .crumbs .sep{color:var(--ink-3)}
+  .sp{flex:1}
+  .cnt{font-size:10.5px;color:var(--ink-3);white-space:nowrap}
+
+  table{width:100%;border-collapse:collapse;font-size:12.5px}
+  th{text-align:left;font-weight:550;font-size:10.5px;color:var(--ink-3);padding:5px 10px;
+    border-bottom:1px solid var(--line-2);background:var(--panel-2)}
+  td{padding:4.5px 10px;border-bottom:1px solid var(--line-2);white-space:nowrap;
+    overflow:hidden;text-overflow:ellipsis}
+  td.s,th.s{text-align:right;color:var(--ink-2);font-variant-numeric:tabular-nums}
+  tr.sel td{background:var(--sel)}
+  .ico{display:inline-block;width:15px}
+
+  .actcol{width:74px;flex:0 0 74px;display:flex;flex-direction:column;align-items:center;
+    justify-content:center;gap:8px;background:var(--panel-2);border-left:1px solid var(--line);
+    border-right:1px solid var(--line)}
+  .act{width:54px;padding:7px 0;text-align:center;font-size:11px;font-weight:600;border-radius:7px;
+    background:var(--panel);border:1px solid var(--line);color:var(--ink);line-height:1.25}
+  .act.p{background:var(--accent);border-color:var(--accent);color:#fff}
+  .act.m{color:var(--bad)}
+  .act .ar{display:block;font-size:15px;line-height:1;margin-bottom:1px}
+  .rule{width:34px;height:1px;background:var(--line)}
+
+  .xfer{border-top:1px solid var(--line);background:var(--panel-2);padding:8px 12px;
+    display:flex;align-items:center;gap:10px;font-size:12px}
+  .bar{flex:1;height:6px;border-radius:3px;background:var(--line);overflow:hidden;min-width:50px}
+  .bar i{display:block;height:100%;width:62%;background:var(--accent)}
+  .xfer .meta{color:var(--ink-2);font-variant-numeric:tabular-nums;white-space:nowrap;font-size:11.5px}
+  .xfer .nm{font-weight:550;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:170px}
+
+  .note{margin-top:18px;padding:12px 14px;border-radius:8px;background:var(--note-bg);
+    color:var(--note);font-size:13.5px;border:1px solid rgba(0,0,0,.06)}
+  .tbl{width:100%;border-collapse:collapse;font-size:13.5px;margin-top:14px}
+  .tbl th{background:var(--panel-2);border-bottom:1px solid var(--line);padding:8px 11px;font-size:10.5px;
+    letter-spacing:.05em;text-transform:uppercase;color:var(--ink-3);text-align:left}
+  .tbl td{padding:8px 11px;border-bottom:1px solid var(--line-2);color:var(--ink-2)}
+  .tbl td:first-child{color:var(--ink);font-weight:550;white-space:nowrap;font-family:var(--mono);font-size:12px}
+  .ok{color:var(--good);font-weight:600}.no{color:var(--bad);font-weight:600}
+  .q{margin:42px 0 0;padding:14px 16px;background:var(--accent-soft);border-radius:var(--radius);font-weight:550}
+  .kbd{font:11px/1 var(--mono);border:1px solid var(--line);border-bottom-width:2px;border-radius:4px;
+    padding:2px 5px;background:var(--panel);color:var(--ink)}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<h1>Option B, with a sidebar in each pane</h1>
+<p class="sub">You were right — this is the familiar shape, and a sidebar does something a dropdown can't: you can <b>drag files straight onto a favourite</b> to send them there without navigating either pane. Both sidebars collapse independently with <span class="kbd">⌘1</span> / <span class="kbd">⌘2</span>.</p>
+
+<!-- ============== B1 ============== -->
+<h2><span class="badge rec">B1 · recommended</span>Sidebars + centre action column</h2>
+<p class="lede">Everything from before, plus a Finder-style sidebar per pane. The phone sidebar carries the device and its storage meter; the Mac sidebar mirrors Finder's favourites. Note the dashed drop target — that's a drag in progress onto <b>Camera</b>.</p>
+
+<div class="win">
+  <div class="titlebar">
+    <span class="dots"><i></i><i></i><i></i></span>
+    <span class="title">Conduit — Pixel 8</span>
+    <span class="tb">
+      <span class="btn i">⌘1</span><span class="btn i">⌘2</span>
+      <span class="btn">New Folder</span><span class="btn m">Delete</span>
+    </span>
+  </div>
+  <div class="body">
+    <div class="sidebar">
+      <div class="sb-h">Favourites</div>
+      <div class="sb-i"><span class="e">🏠</span>Home</div>
+      <div class="sb-i on"><span class="e">⬇</span>Downloads</div>
+      <div class="sb-i"><span class="e">🖥</span>Desktop</div>
+      <div class="sb-i"><span class="e">📄</span>Documents</div>
+      <div class="sb-i"><span class="e">🖼</span>Pictures</div>
+      <div class="sb-div"></div>
+      <div class="sb-h">Locations</div>
+      <div class="sb-i"><span class="e">💾</span>Macintosh HD</div>
+      <div class="sb-i"><span class="e">🔌</span>SanDisk</div>
+    </div>
+
+    <div class="pane">
+      <div class="hdr">
+        <span class="nb off">←</span><span class="nb">→</span><span class="nb">↑</span>
+        <span class="crumbs"><a>~</a><span class="sep">›</span><span class="cur">Downloads</span></span>
+        <span class="sp"></span><span class="cnt">5 items</span><span class="nb">⟳</span>
+      </div>
+      <table>
+        <thead><tr><th>Name</th><th class="s">Size</th></tr></thead>
+        <tbody>
+          <tr><td><span class="ico">📁</span> invoices</td><td class="s">—</td></tr>
+          <tr class="sel"><td><span class="ico">📄</span> contract-final.pdf</td><td class="s">2.4 MB</td></tr>
+          <tr class="sel"><td><span class="ico">🗜</span> photos-backup.zip</td><td class="s">1.2 GB</td></tr>
+          <tr><td><span class="ico">🎬</span> screencast.mov</td><td class="s">840 MB</td></tr>
+          <tr><td><span class="ico">📄</span> notes.txt</td><td class="s">4 KB</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="actcol">
+      <span class="act p"><span class="ar">→</span>Copy</span>
+      <span class="act m"><span class="ar">⇢</span>Move</span>
+      <span class="rule"></span>
+      <span class="act"><span class="ar">←</span>Copy</span>
+      <span class="act m"><span class="ar">⇠</span>Move</span>
+    </div>
+
+    <div class="pane">
+      <div class="hdr">
+        <span class="nb off">←</span><span class="nb">→</span><span class="nb">↑</span>
+        <span class="crumbs"><a>/sdcard</a><span class="sep">›</span><span class="cur">Download</span></span>
+        <span class="sp"></span><span class="cnt">4 items</span><span class="nb">⟳</span>
+      </div>
+      <table>
+        <thead><tr><th>Name</th><th class="s">Size</th></tr></thead>
+        <tbody>
+          <tr><td><span class="ico">📁</span> Telegram</td><td class="s">—</td></tr>
+          <tr><td><span class="ico">🖼</span> IMG_2033.jpg</td><td class="s">3.9 MB</td></tr>
+          <tr><td><span class="ico">📄</span> boarding-pass.pdf</td><td class="s">210 KB</td></tr>
+          <tr><td><span class="ico">🎵</span> podcast-ep42.mp3</td><td class="s">58 MB</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="sidebar right">
+      <div class="sb-h">Device</div>
+      <div class="sb-i"><span class="e">📱</span>Pixel 8</div>
+      <div class="meter"><i></i></div>
+      <div class="meter-l">41 GB free of 128 GB</div>
+      <div class="sb-div"></div>
+      <div class="sb-h">Favourites</div>
+      <div class="sb-i on"><span class="e">⬇</span>Download</div>
+      <div class="sb-i drop"><span class="e">📷</span>Camera</div>
+      <div class="sb-i"><span class="e">🖼</span>Pictures</div>
+      <div class="sb-i"><span class="e">🎵</span>Music</div>
+      <div class="sb-i"><span class="e">🎬</span>Movies</div>
+      <div class="sb-i"><span class="e">📄</span>Documents</div>
+    </div>
+  </div>
+  <div class="xfer">
+    <span class="nm">photos-backup.zip</span>
+    <span class="bar"><i></i></span>
+    <span class="meta">62% · 78 MB/s · 4s left</span>
+    <span class="btn">Cancel</span>
+  </div>
+</div>
+
+<div class="note">
+  <b>Drag onto a favourite.</b> The dashed outline on <b>Camera</b> is what you'd see mid-drag. Drop there and the files go to <span class="kbd">/sdcard/DCIM/Camera</span> — the right-hand pane never has to leave <span class="kbd">/sdcard/Download</span>. This works in both directions and is the single best reason to have sidebars at all.
+</div>
+
+<!-- ============== B2 ============== -->
+<h2><span class="badge">B2 · alternative</span>Sidebars, no centre column — direction in the toolbar</h2>
+<p class="lede">Two sidebars plus a 74px action column is a lot of vertical dividers. This version reclaims those pixels by moving the four actions into the toolbar, where the labels still name their direction explicitly — so there's still no "which pane has focus?" rule to learn.</p>
+
+<div class="win">
+  <div class="titlebar">
+    <span class="dots"><i></i><i></i><i></i></span>
+    <span class="title">Conduit — Pixel 8</span>
+    <span class="tb">
+      <span class="grp">
+        <span class="btn p">→ Copy to Phone</span>
+        <span class="btn m">→ Move</span>
+      </span>
+      <span class="grp">
+        <span class="btn">← Copy to Mac</span>
+        <span class="btn m">← Move</span>
+      </span>
+      <span class="btn m">Delete</span>
+    </span>
+  </div>
+  <div class="body" style="min-height:260px">
+    <div class="sidebar">
+      <div class="sb-h">Favourites</div>
+      <div class="sb-i"><span class="e">🏠</span>Home</div>
+      <div class="sb-i on"><span class="e">⬇</span>Downloads</div>
+      <div class="sb-i"><span class="e">🖥</span>Desktop</div>
+      <div class="sb-i"><span class="e">📄</span>Documents</div>
+    </div>
+    <div class="pane">
+      <div class="hdr">
+        <span class="nb off">←</span><span class="nb">→</span><span class="nb">↑</span>
+        <span class="crumbs"><a>~</a><span class="sep">›</span><span class="cur">Downloads</span></span>
+        <span class="sp"></span><span class="nb">⟳</span>
+      </div>
+      <table>
+        <thead><tr><th>Name</th><th class="s">Size</th><th class="s">Modified</th></tr></thead>
+        <tbody>
+          <tr class="sel"><td><span class="ico">📄</span> contract-final.pdf</td><td class="s">2.4 MB</td><td class="s">24 Jul</td></tr>
+          <tr class="sel"><td><span class="ico">🗜</span> photos-backup.zip</td><td class="s">1.2 GB</td><td class="s">24 Jul</td></tr>
+          <tr><td><span class="ico">🎬</span> screencast.mov</td><td class="s">840 MB</td><td class="s">25 Jul</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="pane" style="border-left:1px solid var(--line)">
+      <div class="hdr">
+        <span class="nb off">←</span><span class="nb">→</span><span class="nb">↑</span>
+        <span class="crumbs"><a>/sdcard</a><span class="sep">›</span><span class="cur">Download</span></span>
+        <span class="sp"></span><span class="nb">⟳</span>
+      </div>
+      <table>
+        <thead><tr><th>Name</th><th class="s">Size</th><th class="s">Modified</th></tr></thead>
+        <tbody>
+          <tr><td><span class="ico">🖼</span> IMG_2033.jpg</td><td class="s">3.9 MB</td><td class="s">24 Jul</td></tr>
+          <tr><td><span class="ico">📄</span> boarding-pass.pdf</td><td class="s">210 KB</td><td class="s">25 Jul</td></tr>
+          <tr><td><span class="ico">🎵</span> podcast-ep42.mp3</td><td class="s">58 MB</td><td class="s">26 Jul</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="sidebar right">
+      <div class="sb-h">Pixel 8</div>
+      <div class="meter"><i></i></div>
+      <div class="meter-l">41 GB free of 128 GB</div>
+      <div class="sb-div"></div>
+      <div class="sb-i on"><span class="e">⬇</span>Download</div>
+      <div class="sb-i"><span class="e">📷</span>Camera</div>
+      <div class="sb-i"><span class="e">🎵</span>Music</div>
+      <div class="sb-i"><span class="e">🎬</span>Movies</div>
+    </div>
+  </div>
+  <div class="xfer">
+    <span class="nm">photos-backup.zip</span>
+    <span class="bar"><i></i></span>
+    <span class="meta">62% · 78 MB/s · 4s left</span>
+    <span class="btn">Cancel</span>
+  </div>
+</div>
+
+<!-- ============== WIDTH ============== -->
+<h2>The width budget</h2>
+<p class="lede">Per file list, after chrome. Below ~900px the app auto-collapses one sidebar rather than letting the lists get unusable.</p>
+
+<table class="tbl">
+  <thead><tr><th>Window</th><th>B1 — with centre column</th><th>B2 — toolbar only</th><th>B1, sidebars collapsed</th></tr></thead>
+  <tbody>
+    <tr><td>1440px<br><span style="font-weight:400;font-family:inherit">16" laptop</span></td><td class="ok">~533 px each</td><td class="ok">~570 px each</td><td class="ok">~683 px each</td></tr>
+    <tr><td>1280px</td><td class="ok">~453 px each</td><td class="ok">~490 px each</td><td class="ok">~603 px each</td></tr>
+    <tr><td>1100px<br><span style="font-weight:400;font-family:inherit">13" laptop, windowed</span></td><td>~363 px each</td><td class="ok">~400 px each</td><td class="ok">~513 px each</td></tr>
+    <tr><td>900px</td><td class="no">~263 px each — cramped</td><td>~300 px each</td><td class="ok">~413 px each</td></tr>
+  </tbody>
+</table>
+
+<p class="q">
+  B1 or B2? The trade is 74 pixels against how loudly the app announces which way a move is going. I still lean B1 — the centre column sits between the two panes, which is exactly where your eye already is when you're deciding what goes where — but B2 is the better fit if you mostly work in a smaller window, and the explicit labels keep it safe.
+</p>
+
+</div>
+</body>
+</html>

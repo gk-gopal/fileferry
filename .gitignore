@@ -1,0 +1,41 @@
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+Icon?
+
+# Xcode
+build/
+DerivedData/
+*.xcuserstate
+*.xcuserdatad/
+xcuserdata/
+*.moved-aside
+*.pbxuser
+!default.pbxuser
+*.perspectivev3
+!default.perspectivev3
+*.hmap
+*.ipa
+*.dSYM.zip
+*.dSYM
+
+# Swift Package Manager
+.build/
+.swiftpm/
+Package.resolved
+
+# Signing / secrets — never commit
+*.p12
+*.cer
+*.certSigningRequest
+*.provisionprofile
+AuthKey_*.p8
+.env
+
+# Release artifacts
+dist/
+*.dmg
+
+# Brainstorming companion session state
+.superpowers/
