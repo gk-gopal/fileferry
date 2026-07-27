@@ -2,6 +2,29 @@
 
 All notable changes to FileFerry. Dates are ISO 8601.
 
+## 0.2.1 — 2026-07-27
+
+### Added
+
+- **Rename**, from the pencil button in the pane header or the context menu.
+  Both transports refuse to overwrite an existing name rather than relying on
+  the underlying tool to fail — verified on hardware that Android's `mv`
+  silently destroys the file it lands on, with no error, so without the check
+  a rename could quietly delete an unrelated file.
+- **The phone's real name** instead of its adb serial. Android has no single
+  property for this — `ro.product.model` returns a part number on many phones
+  — so vendor marketing names are tried first. A OnePlus 12R reported
+  `CPH2585`; it now shows "OnePlus 12R".
+- **Elapsed time and average rate** in the completion bar. The rate is shown
+  only above 1 MB, since quoting KB/s for a small file is measurement noise.
+
+### Fixed
+
+- The macOS consent prompt for Documents, Desktop, Downloads and removable
+  volumes gave no reason at all. Those folders are gated by TCC for every app,
+  and the prompt now explains why FileFerry is asking — which matters when a
+  user is already being asked to trust an unnotarized app.
+
 ## 0.2.0 — 2026-07-27
 
 ### Added
@@ -51,6 +74,7 @@ All notable changes to FileFerry. Dates are ISO 8601.
 - Dual-pane app, transfer engine with verified moves, folder tree, preview,
   drag and drop, sorting.
 
+[0.2.1]: https://github.com/gk-gopal/fileferry/releases/tag/v0.2.1
 [0.2.0]: https://github.com/gk-gopal/fileferry/releases/tag/v0.2.0
 [0.1.1]: https://github.com/gk-gopal/fileferry/releases/tag/v0.1.1
 [0.1.0]: https://github.com/gk-gopal/fileferry/releases/tag/v0.1.0
