@@ -90,12 +90,11 @@ private struct SidebarView: View {
                         .buttonStyle(.plain)
                         // Dropping onto a favourite sends files straight there,
                         // without either pane having to navigate.
-                        .dropDestination(for: String.self) { payloads, _ in
-                            model.handleDrop(payloads, onto: pane, directory: favorite.path)
-                            return true
-                        } isTargeted: { targeted in
-                            dropTarget = targeted ? favorite.path : nil
-                        }
+                        .modifier(FavoriteDropModifier(
+                            pane: pane, model: model, directory: favorite.path,
+                            isTargeted: Binding(
+                                get: { dropTarget == favorite.path },
+                                set: { dropTarget = $0 ? favorite.path : nil })))
                     }
                 }
                 .padding(.horizontal, 6)
@@ -112,6 +111,29 @@ private struct SidebarView: View {
 
     private func format(_ bytes: Int64) -> String {
         ByteCountFormatter.string(fromByteCount: bytes, countStyle: .file)
+    }
+}
+
+/// A pane accepts whichever payload the *other* side produces: the phone takes
+/// file URLs, the Mac takes prefixed phone paths.
+private struct FavoriteDropModifier: ViewModifier {
+    let pane: PaneModel
+    let model: AppModel
+    let directory: String?
+    @Binding var isTargeted: Bool
+
+    func body(content: Content) -> some View {
+        if pane.isPhone {
+            content.dropDestination(for: URL.self) { urls, _ in
+                model.dropFiles(urls, onto: pane, directory: directory)
+                return true
+            } isTargeted: { isTargeted = $0 }
+        } else {
+            content.dropDestination(for: String.self) { payloads, _ in
+                model.dropPhonePaths(payloads, onto: pane, directory: directory)
+                return true
+            } isTargeted: { isTargeted = $0 }
+        }
     }
 }
 
@@ -259,14 +281,12 @@ private struct FileTable: View {
                     .allowsHitTesting(false)
             }
         }
-        .dropDestination(for: String.self) { payloads, _ in
-            model.handleDrop(payloads, onto: pane)
-            return true
-        } isTargeted: { isDropTargeted = $0 }
+        .modifier(FavoriteDropModifier(
+            pane: pane, model: model, directory: nil, isTargeted: $isDropTargeted))
     }
 
     private var table: some View {
-        Table(pane.sortedEntries, selection: $pane.selection, sortOrder: $pane.sortOrder) {
+        Table(of: DeviceEntry.self, selection: $pane.selection, sortOrder: $pane.sortOrder) {
             TableColumn("Name", value: \.name) { entry in
                 Label {
                     Text(entry.name).lineLimit(1)
@@ -274,9 +294,6 @@ private struct FileTable: View {
                     Image(systemName: entry.isDirectory ? "folder.fill" : icon(for: entry.name))
                         .foregroundStyle(entry.isDirectory ? Color.accentColor : .secondary)
                 }
-                // Mac rows travel as file paths, so a drag into Finder or onto
-                // the phone pane both work. Phone rows carry a scheme prefix.
-                .draggable(payload(for: entry))
             }
             TableColumn("Size", value: \.size) { entry in
                 Text(entry.isDirectory
@@ -292,6 +309,14 @@ private struct FileTable: View {
                     .font(.caption).foregroundStyle(.tertiary)
             }
             .width(min: 90, ideal: 110)
+        } rows: {
+            ForEach(pane.sortedEntries) { entry in
+                // Drag belongs on the row, not on cell content. A .draggable
+                // inside a TableColumn swallows the mouse-down, which stops
+                // rows from being selectable at all.
+                TableRow(entry)
+                    .itemProvider { itemProvider(for: entry) }
+            }
         }
         .tableStyle(.inset)
         .contextMenu(forSelectionType: String.self) { selected in
@@ -315,10 +340,22 @@ private struct FileTable: View {
             model.preview(pane)
             return .handled
         }
+        // Once Quick Look is open, follow the selection the way Finder does.
+        // Deliberately only when it is already open — otherwise clicking a
+        // phone file would pull it across the wire unasked.
+        .onChange(of: pane.selection) {
+            model.previewIfPanelOpen(pane)
+        }
     }
 
-    private func payload(for entry: DeviceEntry) -> String {
-        pane.dragPayload(for: entry)
+    /// Mac rows vend a file URL, so dragging to Finder is a real file drag
+    /// rather than a text clipping. Phone rows have no local URL, so they vend
+    /// a prefixed string that only this app understands.
+    private func itemProvider(for entry: DeviceEntry) -> NSItemProvider {
+        if pane.isPhone {
+            return NSItemProvider(object: pane.dragPayload(for: entry) as NSString)
+        }
+        return NSItemProvider(object: URL(fileURLWithPath: entry.path) as NSURL)
     }
 
     private func icon(for name: String) -> String {

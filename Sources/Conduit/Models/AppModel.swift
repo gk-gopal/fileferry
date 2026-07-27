@@ -1,5 +1,6 @@
 import Foundation
 import Observation
+import Quartz
 import ADBKit
 import ADBTransport
 import LocalTransport
@@ -232,26 +233,31 @@ final class AppModel {
 
     // MARK: - Drag and drop
 
-    /// Resolves a dropped payload into (paths, originating pane).
-    /// Mac items travel as plain file paths; phone items carry a scheme prefix.
-    func resolveDrop(_ payloads: [String], onto destination: PaneModel) -> (paths: [String], source: PaneModel)? {
-        let phonePayloads = payloads.filter { $0.hasPrefix(PaneModel.phoneDragPrefix) }
-        let macPayloads = payloads.filter { !$0.hasPrefix(PaneModel.phoneDragPrefix) }
-
-        if !phonePayloads.isEmpty, let phonePane, !destination.isPhone {
-            return (phonePayloads.map { String($0.dropFirst(PaneModel.phoneDragPrefix.count)) }, phonePane)
-        }
-        if !macPayloads.isEmpty, destination.isPhone {
-            return (macPayloads, macPane)
-        }
-        return nil   // same-pane drop, or nothing usable
+    /// Files dragged from the Mac pane or from Finder arrive as URLs, which is
+    /// what makes dragging out to Finder work as a real file drag rather than
+    /// a text clipping.
+    func dropFiles(_ urls: [URL], onto destination: PaneModel, directory: String? = nil) {
+        guard destination.isPhone, !urls.isEmpty else { return }
+        transfer(
+            paths: urls.map(\.path),
+            from: macPane,
+            to: destination,
+            into: directory,
+            mode: .copy
+        )
     }
 
-    func handleDrop(_ payloads: [String], onto destination: PaneModel, directory: String? = nil) {
-        guard let resolved = resolveDrop(payloads, onto: destination) else { return }
+    /// Phone paths have no URL representation on this machine, so they travel
+    /// as strings behind a scheme prefix.
+    func dropPhonePaths(_ payloads: [String], onto destination: PaneModel, directory: String? = nil) {
+        guard !destination.isPhone, let phonePane else { return }
+        let paths = payloads
+            .filter { $0.hasPrefix(PaneModel.phoneDragPrefix) }
+            .map { String($0.dropFirst(PaneModel.phoneDragPrefix.count)) }
+        guard !paths.isEmpty else { return }
         transfer(
-            paths: resolved.paths,
-            from: resolved.source,
+            paths: paths,
+            from: phonePane,
             to: destination,
             into: directory,
             mode: .copy
@@ -261,6 +267,20 @@ final class AppModel {
     // MARK: - Preview
 
     var isPreparingPreview = false
+
+    /// True while the system Quick Look panel is on screen. Used to follow the
+    /// selection, the way Finder does once the panel is open.
+    var isPreviewPanelVisible: Bool {
+        QLPreviewPanel.sharedPreviewPanelExists() && QLPreviewPanel.shared().isVisible
+    }
+
+    /// Called when a selection changes. Only re-previews if the panel is
+    /// already open — otherwise merely clicking a file would yank a phone file
+    /// across the wire unasked.
+    func previewIfPanelOpen(_ pane: PaneModel) {
+        guard isPreviewPanelVisible else { return }
+        preview(pane)
+    }
 
     /// Quick Look needs a real file, so phone items are fetched to a cache
     /// first. Local files open straight away.
