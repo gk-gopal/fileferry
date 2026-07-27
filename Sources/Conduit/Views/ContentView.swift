@@ -68,6 +68,18 @@ struct ContentView: View {
             }
         }
         .alert(
+            "Delete \(model.deleteRequest?.entries.count ?? 0) item\(model.deleteRequest?.entries.count == 1 ? "" : "s")?",
+            isPresented: Binding(
+                get: { model.deleteRequest != nil },
+                set: { if !$0 { model.deleteRequest = nil } }
+            )
+        ) {
+            Button("Delete", role: .destructive) { model.confirmDelete() }
+            Button("Cancel", role: .cancel) { model.deleteRequest = nil }
+        } message: {
+            Text(deleteMessage)
+        }
+        .alert(
             "Transfer problem",
             isPresented: Binding(
                 get: { model.alertMessage != nil },
@@ -79,6 +91,16 @@ struct ContentView: View {
             Text(model.alertMessage ?? "")
         }
         .task { await model.start() }
+    }
+
+    /// Names the first few targets — "3 items" alone is how people delete the
+    /// wrong thing. There is no trash on the phone, so this is irreversible.
+    private var deleteMessage: String {
+        guard let request = model.deleteRequest else { return "" }
+        let names = request.entries.prefix(3).map(\.name).joined(separator: ", ")
+        let more = request.entries.count > 3 ? " and \(request.entries.count - 3) more" : ""
+        let location = request.pane.isPhone ? "the phone" : "this Mac"
+        return "\(names)\(more) will be deleted from \(location). This can't be undone."
     }
 }
 

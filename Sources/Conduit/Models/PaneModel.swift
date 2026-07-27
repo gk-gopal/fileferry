@@ -40,7 +40,26 @@ final class PaneModel {
     /// Auto-preview fetches the file, so it is capped. Clicking through a
     /// camera roll should not quietly pull a 1.8 GB video over USB; past this
     /// size the strip offers a button instead.
-    static let autoPreviewLimit: Int64 = 50 * 1024 * 1024
+    var autoPreviewLimit: Int64 { Preferences.shared.autoPreviewLimitBytes }
+
+    /// User-pinned folders, on top of the built-in ones.
+    var pinnedFavorites: [Favorite] {
+        Preferences.shared.pins(isPhone: isPhone).map { path in
+            Favorite(
+                symbol: "pin.fill",
+                name: (path as NSString).lastPathComponent.isEmpty ? path : (path as NSString).lastPathComponent,
+                path: path
+            )
+        }
+    }
+
+    var isCurrentFolderPinned: Bool {
+        Preferences.shared.isPinned(path, isPhone: isPhone)
+    }
+
+    func togglePinForCurrentFolder() {
+        Preferences.shared.togglePin(path, isPhone: isPhone)
+    }
 
     // MARK: - Inline preview
 
@@ -67,7 +86,7 @@ final class PaneModel {
         previewError = nil
         previewTooLarge = nil
 
-        guard showPreviewStrip, let entry = singleSelectedFile else {
+        guard Preferences.shared.showPreviewStrip, showPreviewStrip, let entry = singleSelectedFile else {
             previewURL = nil
             isPreviewLoading = false
             return
@@ -87,7 +106,7 @@ final class PaneModel {
         }
 
         previewURL = nil
-        guard entry.size <= PaneModel.autoPreviewLimit else {
+        guard entry.size <= autoPreviewLimit else {
             previewTooLarge = entry
             isPreviewLoading = false
             return
@@ -239,6 +258,12 @@ final class PaneModel {
         freeSpace = try? await transport.freeSpace(at: path)
         // Keep the sidebar tree in step with wherever the pane went.
         await tree.reveal(path)
+
+        if isPhone {
+            Preferences.shared.phoneLastPath = path
+        } else {
+            Preferences.shared.macLastPath = path
+        }
     }
 
     func go(to newPath: String, recordHistory: Bool = true) async {

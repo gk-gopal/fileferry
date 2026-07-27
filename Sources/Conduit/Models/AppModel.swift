@@ -56,11 +56,18 @@ final class AppModel {
         Favorite(symbol: "doc", name: "Documents", path: "/sdcard/Documents"),
     ]
 
+    /// Pending destructive action, awaiting confirmation.
+    var deleteRequest: (pane: PaneModel, entries: [DeviceEntry])?
+
     init() {
+        let preferences = Preferences.shared
+        let start = preferences.restoreLastFolder
+            ? (preferences.macLastPath ?? NSHomeDirectory() + "/Downloads")
+            : NSHomeDirectory() + "/Downloads"
         macPane = PaneModel(
             title: "Mac",
             transport: LocalTransport(),
-            path: NSHomeDirectory() + "/Downloads",
+            path: FileManager.default.fileExists(atPath: start) ? start : NSHomeDirectory(),
             favorites: AppModel.macFavorites,
             isPhone: false,
             treeRoot: NSHomeDirectory()
@@ -82,7 +89,7 @@ final class AppModel {
 
         let binary: ADBBinary
         do {
-            binary = try ADBBinary.resolve()
+            binary = try ADBBinary.resolve(configuredPath: Preferences.shared.resolvedADBPath)
         } catch ADBError.binaryNotFound {
             status = .adbMissing
             return
@@ -123,10 +130,14 @@ final class AppModel {
             guard status != .ready(serial: ready.serial) else { return }
             status = .ready(serial: ready.serial)
             let transport = ADBTransport(server: server, serial: ready.serial)
+            let preferences = Preferences.shared
+            let start = preferences.restoreLastFolder
+                ? (preferences.phoneLastPath ?? "/sdcard")
+                : "/sdcard"
             let pane = PaneModel(
                 title: ready.serial,
                 transport: transport,
-                path: "/sdcard",
+                path: start,
                 favorites: AppModel.phoneFavorites,
                 isPhone: true,
                 treeRoot: "/sdcard"
@@ -180,7 +191,7 @@ final class AppModel {
             sources: paths,
             destinationDirectory: directory ?? destination.path,
             mode: mode,
-            conflictPolicy: .rename
+            conflictPolicy: Preferences.shared.conflictPolicy
         )
         let verb = mode == .move ? "Moving" : "Copying"
         transfer = ActiveTransfer(
@@ -194,7 +205,7 @@ final class AppModel {
         let destinationTransport = destination.transport
 
         transferTask = Task { @MainActor [self] in
-            let engine = TransferEngine()
+            let engine = TransferEngine(concurrency: Preferences.shared.concurrency)
             do {
                 let report = try await engine.run(
                     job,
@@ -362,9 +373,21 @@ final class AppModel {
 
     // MARK: - Destructive actions
 
-    func delete(in pane: PaneModel) {
+    /// Deleting is irreversible on both sides — there is no trash on the phone
+    /// — so it always goes through a confirmation.
+    func requestDelete(in pane: PaneModel) {
         let targets = pane.selectedEntries
         guard !targets.isEmpty, !isBusy else { return }
+        deleteRequest = (pane, targets)
+    }
+
+    func confirmDelete() {
+        guard let request = deleteRequest else { return }
+        deleteRequest = nil
+        performDelete(request.entries, in: request.pane)
+    }
+
+    private func performDelete(_ targets: [DeviceEntry], in pane: PaneModel) {
         Task {
             for entry in targets {
                 do {

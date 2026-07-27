@@ -11,6 +11,8 @@ struct PaneView: View {
 
     @State private var showingNewFolder = false
     @State private var newFolderName = ""
+    @State private var showingGoToPath = false
+    @State private var goToPathText = ""
 
     var body: some View {
         HStack(spacing: 0) {
@@ -20,7 +22,11 @@ struct PaneView: View {
                 Divider()
             }
             VStack(spacing: 0) {
-                PaneHeader(pane: pane, model: model, showingNewFolder: $showingNewFolder)
+                PaneHeader(
+                    pane: pane, model: model,
+                    showingNewFolder: $showingNewFolder,
+                    showingGoToPath: $showingGoToPath,
+                    goToPathText: $goToPathText)
                 Divider()
                 FileTable(pane: pane, model: model)
                 if pane.showPreviewStrip, pane.singleSelectedFile != nil {
@@ -44,6 +50,21 @@ struct PaneView: View {
                 }
             )
         }
+        .sheet(isPresented: $showingGoToPath) {
+            GoToPathSheet(
+                title: pane.isPhone ? "On \(pane.title)" : "On this Mac",
+                path: $goToPathText,
+                go: {
+                    let expanded = goToPathText.hasPrefix("~")
+                        ? NSString(string: goToPathText).expandingTildeInPath
+                        : goToPathText
+                    showingGoToPath = false
+                    Task { await pane.go(to: expanded) }
+                },
+                cancel: { showingGoToPath = false }
+            )
+        }
+        .onAppear { goToPathText = pane.path }
     }
 }
 
@@ -89,6 +110,31 @@ private struct SidebarView: View {
                         .modifier(FavoriteDropModifier(
                             pane: pane, model: model, directory: favorite.path,
                             isTargeted: binding(for: favorite.path)))
+                    }
+
+                    if !pane.pinnedFavorites.isEmpty {
+                        sectionHeader("Pinned")
+                        ForEach(pane.pinnedFavorites) { pin in
+                            Button {
+                                Task { await pane.go(to: pin.path) }
+                            } label: {
+                                Label(pin.name, systemImage: pin.symbol)
+                                    .font(.callout).lineLimit(1).truncationMode(.middle)
+                                    .frame(maxWidth: .infinity, alignment: .leading)
+                                    .padding(.horizontal, 10).padding(.vertical, 4)
+                                    .background(background(for: pin.path), in: RoundedRectangle(cornerRadius: 5))
+                                    .overlay { dropOutline(pin.path) }
+                            }
+                            .buttonStyle(.plain)
+                            .contextMenu {
+                                Button("Unpin") {
+                                    Preferences.shared.togglePin(pin.path, isPhone: pane.isPhone)
+                                }
+                            }
+                            .modifier(FavoriteDropModifier(
+                                pane: pane, model: model, directory: pin.path,
+                                isTargeted: binding(for: pin.path)))
+                        }
                     }
 
                     sectionHeader("Folders")
@@ -224,6 +270,8 @@ private struct PaneHeader: View {
     @Bindable var pane: PaneModel
     @Bindable var model: AppModel
     @Binding var showingNewFolder: Bool
+    @Binding var showingGoToPath: Bool
+    @Binding var goToPathText: String
 
     var body: some View {
         HStack(spacing: 6) {
@@ -268,8 +316,27 @@ private struct PaneHeader: View {
             }
             .help(pane.showPreviewStrip ? "Hide the preview" : "Show a preview when one file is selected")
 
+            Button {
+                pane.togglePinForCurrentFolder()
+            } label: {
+                Image(systemName: pane.isCurrentFolderPinned ? "pin.fill" : "pin")
+            }
+            .help(pane.isCurrentFolderPinned ? "Unpin this folder" : "Pin this folder to the sidebar")
+
+            Button {
+                goToPathText = pane.path
+                showingGoToPath = true
+            } label: {
+                Image(systemName: "arrow.right.to.line")
+            }
+            .help("Go to a folder by path")
+
             Button { showingNewFolder = true } label: { Image(systemName: "folder.badge.plus") }
                 .help("New folder in \(pane.path)")
+
+            Button { model.requestDelete(in: pane) } label: { Image(systemName: "trash") }
+                .disabled(pane.selection.isEmpty || model.isBusy)
+                .help("Delete the selection")
 
             Button { Task { await pane.refresh() } } label: { Image(systemName: "arrow.clockwise") }
                 .help("Refresh")
@@ -412,6 +479,8 @@ private struct FileTable: View {
             if !selected.isEmpty {
                 Button("Open") { activateSelection() }
                 Button("Quick Look") { model.preview(pane) }
+                Divider()
+                Button("Delete…", role: .destructive) { model.requestDelete(in: pane) }
                 Divider()
             }
             Button("Refresh") { Task { await pane.refresh() } }
