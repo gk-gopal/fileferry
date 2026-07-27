@@ -21,6 +21,44 @@ on one Mac and one phone. Rough edges are expected — that's the point.
 If FileFerry says the device is *unauthorized*, step 4 hasn't happened yet —
 unlock the phone and look for the prompt.
 
+## Getting the app
+
+You'll get a GitHub invite by email, or at
+[github.com/notifications](https://github.com/notifications). Accept it first —
+until you do, every link below 404s.
+
+### Option A — download the built app (about two minutes)
+
+1. Go to <https://github.com/gk-gopal/fileferry/releases>
+2. Download the newest `FileFerry-x.y.z.dmg`
+3. Open it and drag FileFerry to Applications
+4. Follow **Installing** below to get past Gatekeeper once
+
+### Option B — build it yourself (no Gatekeeper prompt at all)
+
+Needs Xcode installed (a large download; skip this if you don't have it).
+Quarantine is applied to things you *download*, so an app you build locally is
+never blocked:
+
+```bash
+git clone https://github.com/gk-gopal/fileferry
+cd fileferry
+Scripts/make-app.sh release      # -> dist/FileFerry.app
+open dist/FileFerry.app
+```
+
+You can also run the test suite, which needs neither a phone nor adb:
+
+```bash
+swift test        # 72 tests
+```
+
+### Not yet: Homebrew
+
+`brew tap gk-gopal/tap` exists but **won't work while the repo is private** —
+Homebrew's downloader has no GitHub credentials, so fetching the release
+asset fails. Use Option A or B for now.
+
 ## Installing
 
 FileFerry isn't notarized by Apple (that costs $99/yr), so macOS blocks it the
