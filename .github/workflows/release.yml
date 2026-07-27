@@ -68,6 +68,9 @@ jobs:
       - name: Build DMG
         run: Scripts/make-dmg.sh "${GITHUB_REF_NAME#v}"
 
+      - name: Build zip
+        run: Scripts/make-zip.sh "${GITHUB_REF_NAME#v}"
+
       - name: Checksum
         run: shasum -a 256 dist/*.dmg | tee dist/SHA256SUMS.txt
 
@@ -76,6 +79,7 @@ jobs:
         with:
           files: |
             dist/*.dmg
+            dist/*.zip
             dist/SHA256SUMS.txt
           body: |
             ## FileFerry ${{ github.ref_name }}
