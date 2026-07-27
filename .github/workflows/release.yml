@@ -72,7 +72,7 @@ jobs:
         run: Scripts/make-zip.sh "${GITHUB_REF_NAME#v}"
 
       - name: Checksum
-        run: shasum -a 256 dist/*.dmg dist/*.zip | tee| tee dist/SHA256SUMS.txt
+        run: shasum -a 256 dist/*.dmg dist/*.zip | tee dist/SHA256SUMS.txt
 
       - name: Publish release
         uses: softprops/action-gh-release@v2
