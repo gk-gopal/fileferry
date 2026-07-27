@@ -54,6 +54,19 @@ struct ContentView: View {
                 .keyboardShortcut("2", modifiers: .command)
             }
         }
+        .sheet(isPresented: $model.isShowingPreview) {
+            PreviewSheet(model: model)
+        }
+        .overlay {
+            if model.isPreparingPreview {
+                VStack(spacing: 10) {
+                    ProgressView()
+                    Text("Fetching from phone…").font(.callout)
+                }
+                .padding(24)
+                .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 12))
+            }
+        }
         .alert(
             "Transfer problem",
             isPresented: Binding(

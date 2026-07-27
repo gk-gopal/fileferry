@@ -267,18 +267,39 @@ final class AppModel {
     // MARK: - Preview
 
     var isPreparingPreview = false
+    var previewURLs: [URL] = []
+    var previewIndex = 0
+    var isShowingPreview = false
 
-    /// True while the system Quick Look panel is on screen. Used to follow the
-    /// selection, the way Finder does once the panel is open.
-    var isPreviewPanelVisible: Bool {
-        QLPreviewPanel.sharedPreviewPanelExists() && QLPreviewPanel.shared().isVisible
+    var currentPreviewURL: URL? {
+        previewURLs.indices.contains(previewIndex) ? previewURLs[previewIndex] : nil
     }
 
-    /// Called when a selection changes. Only re-previews if the panel is
+    var previewTitle: String {
+        currentPreviewURL.map { $0.lastPathComponent } ?? "Preview"
+    }
+
+    func previewNext() {
+        guard previewIndex < previewURLs.count - 1 else { return }
+        previewIndex += 1
+    }
+
+    func previewPrevious() {
+        guard previewIndex > 0 else { return }
+        previewIndex -= 1
+    }
+
+    func closePreview() {
+        isShowingPreview = false
+        previewURLs = []
+        previewIndex = 0
+    }
+
+    /// Called when a selection changes. Only re-previews if the sheet is
     /// already open — otherwise merely clicking a file would yank a phone file
     /// across the wire unasked.
     func previewIfPanelOpen(_ pane: PaneModel) {
-        guard isPreviewPanelVisible else { return }
+        guard isShowingPreview else { return }
         preview(pane)
     }
 
@@ -289,7 +310,7 @@ final class AppModel {
         guard !targets.isEmpty, !isPreparingPreview else { return }
 
         guard pane.isPhone else {
-            QuickLookPreview.shared.show(targets.map { URL(fileURLWithPath: $0.path) })
+            show(urls: targets.map { URL(fileURLWithPath: $0.path) })
             return
         }
 
@@ -299,10 +320,10 @@ final class AppModel {
             defer { isPreparingPreview = false }
             var urls: [URL] = []
             let local = LocalTransport()
-            // Cap it: Quick Look on a 40-file selection would mean pulling all
-            // of them before showing anything.
+            // Cap it: previewing a 40-file selection would mean pulling all of
+            // them before showing anything.
             for entry in targets.prefix(8) {
-                let cached = QuickLookPreview.cacheURL(
+                let cached = PreviewCache.url(
                     forRemote: entry.path, size: entry.size, mtime: entry.mtime)
                 if !FileManager.default.fileExists(atPath: cached.path) {
                     do {
@@ -314,9 +335,15 @@ final class AppModel {
                 }
                 urls.append(cached)
             }
-            guard !urls.isEmpty else { return }
-            QuickLookPreview.shared.show(urls)
+            show(urls: urls)
         }
+    }
+
+    private func show(urls: [URL]) {
+        guard !urls.isEmpty else { return }
+        previewURLs = urls
+        previewIndex = 0
+        isShowingPreview = true
     }
 
     // MARK: - New folder

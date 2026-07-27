@@ -1,49 +1,94 @@
 import AppKit
 import Quartz
+import SwiftUI
 
-/// Drives the system Quick Look panel.
+/// Where previewed phone files are cached.
 ///
-/// Phone files have to be fetched before they can be previewed — Quick Look
-/// needs a real file on disk — so they are pulled to a cache directory keyed
-/// by path, size and mtime, and reused on a second look.
-@MainActor
-final class QuickLookPreview: NSObject, @preconcurrency QLPreviewPanelDataSource {
-    static let shared = QuickLookPreview()
-
-    private var items: [URL] = []
-
-    static let cacheDirectory: URL = {
+/// Quick Look needs a real file on disk, so phone files are fetched first and
+/// keyed by path, size and mtime — a changed file is re-fetched rather than
+/// served stale.
+enum PreviewCache {
+    static let directory: URL = {
         let base = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask)[0]
             .appendingPathComponent("dev.gopalkannan.conduit/preview", isDirectory: true)
         try? FileManager.default.createDirectory(at: base, withIntermediateDirectories: true)
         return base
     }()
 
-    func show(_ urls: [URL]) {
-        guard !urls.isEmpty, let panel = QLPreviewPanel.shared() else { return }
-        items = urls
-        panel.dataSource = self
-        panel.makeKeyAndOrderFront(nil)
-        panel.reloadData()
-    }
-
-    /// Where a remote file should be cached. Including size and mtime means a
-    /// changed file is re-fetched rather than served stale.
-    static func cacheURL(forRemote path: String, size: Int64, mtime: Date) -> URL {
+    static func url(forRemote path: String, size: Int64, mtime: Date) -> URL {
         let stamp = Int(mtime.timeIntervalSince1970)
         let key = "\(abs(path.hashValue))-\(size)-\(stamp)"
         let ext = (path as NSString).pathExtension
-        let name = ext.isEmpty ? key : "\(key).\(ext)"
-        return cacheDirectory.appendingPathComponent(name)
+        return directory.appendingPathComponent(ext.isEmpty ? key : "\(key).\(ext)")
+    }
+}
+
+/// `QLPreviewView` renders a file directly.
+///
+/// The system `QLPreviewPanel` was tried first and abandoned: it negotiates
+/// through the responder chain via `acceptsPreviewPanelControl(_:)`, and
+/// nothing in a SwiftUI hierarchy accepts control, so the panel opens empty.
+/// This needs no negotiation.
+struct QuickLookView: NSViewRepresentable {
+    let url: URL
+
+    func makeNSView(context: Context) -> QLPreviewView {
+        let view = QLPreviewView(frame: .zero, style: .normal) ?? QLPreviewView()
+        view.autostarts = true
+        view.previewItem = url as NSURL
+        return view
     }
 
-    // MARK: - QLPreviewPanelDataSource
-
-    func numberOfPreviewItems(in panel: QLPreviewPanel!) -> Int {
-        items.count
+    func updateNSView(_ view: QLPreviewView, context: Context) {
+        guard (view.previewItem as? NSURL) as URL? != url else { return }
+        view.previewItem = url as NSURL
+        view.refreshPreviewItem()
     }
 
-    func previewPanel(_ panel: QLPreviewPanel!, previewItemAt index: Int) -> (any QLPreviewItem)! {
-        items[index] as NSURL
+    static func dismantleNSView(_ view: QLPreviewView, coordinator: ()) {
+        view.close()
+    }
+}
+
+/// The preview sheet: one file at a time, with keyboard navigation through
+/// the rest of the selection.
+struct PreviewSheet: View {
+    @Bindable var model: AppModel
+
+    var body: some View {
+        VStack(spacing: 0) {
+            HStack(spacing: 10) {
+                Text(model.previewTitle)
+                    .font(.headline).lineLimit(1).truncationMode(.middle)
+                if model.previewURLs.count > 1 {
+                    Text("\(model.previewIndex + 1) of \(model.previewURLs.count)")
+                        .font(.caption).foregroundStyle(.secondary).monospacedDigit()
+                }
+                Spacer()
+                if model.previewURLs.count > 1 {
+                    Button { model.previewPrevious() } label: { Image(systemName: "chevron.left") }
+                        .disabled(model.previewIndex == 0)
+                    Button { model.previewNext() } label: { Image(systemName: "chevron.right") }
+                        .disabled(model.previewIndex >= model.previewURLs.count - 1)
+                }
+                Button("Done") { model.closePreview() }
+                    .keyboardShortcut(.defaultAction)
+            }
+            .padding(12)
+
+            Divider()
+
+            if let url = model.currentPreviewURL {
+                QuickLookView(url: url)
+                    .id(url)
+            } else {
+                ContentUnavailableView("Nothing to preview", systemImage: "eye.slash")
+            }
+        }
+        .frame(minWidth: 720, idealWidth: 900, minHeight: 480, idealHeight: 620)
+        .onKeyPress(.leftArrow) { model.previewPrevious(); return .handled }
+        .onKeyPress(.rightArrow) { model.previewNext(); return .handled }
+        .onKeyPress(.escape) { model.closePreview(); return .handled }
+        .onKeyPress(.space) { model.closePreview(); return .handled }
     }
 }
