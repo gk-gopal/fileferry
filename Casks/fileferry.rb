@@ -7,10 +7,10 @@ cask "fileferry" do
   version "0.1.0"
   sha256 :no_check # replace with: shasum -a 256 dist/FileFerry-<version>.dmg
 
-  url "https://github.com/OWNER/fileferry/releases/download/v#{version}/FileFerry-#{version}.dmg"
+  url "https://github.com/gk-gopal/fileferry/releases/download/v#{version}/FileFerry-#{version}.dmg"
   name "FileFerry"
   desc "Copy files between a Mac and an Android phone over USB"
-  homepage "https://github.com/OWNER/fileferry"
+  homepage "https://github.com/gk-gopal/fileferry"
 
   depends_on macos: ">= :sonoma"
 
