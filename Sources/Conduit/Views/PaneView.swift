@@ -23,6 +23,10 @@ struct PaneView: View {
                 PaneHeader(pane: pane, model: model, showingNewFolder: $showingNewFolder)
                 Divider()
                 FileTable(pane: pane, model: model)
+                if pane.showPreviewStrip, pane.singleSelectedFile != nil {
+                    Divider()
+                    PreviewStrip(pane: pane)
+                }
             }
         }
         .sheet(isPresented: $showingNewFolder) {
@@ -179,6 +183,14 @@ private struct PaneHeader: View {
 
             SortMenu(pane: pane)
 
+            Button {
+                pane.showPreviewStrip.toggle()
+                pane.refreshPreview()
+            } label: {
+                Image(systemName: pane.showPreviewStrip ? "eye" : "eye.slash")
+            }
+            .help(pane.showPreviewStrip ? "Hide the preview" : "Show a preview when one file is selected")
+
             Button { showingNewFolder = true } label: { Image(systemName: "folder.badge.plus") }
                 .help("New folder in \(pane.path)")
 
@@ -321,31 +333,29 @@ private struct FileTable: View {
         .tableStyle(.inset)
         .contextMenu(forSelectionType: String.self) { selected in
             if !selected.isEmpty {
+                Button("Open") { activateSelection() }
                 Button("Quick Look") { model.preview(pane) }
                 Divider()
             }
             Button("Refresh") { Task { await pane.refresh() } }
-        } primaryAction: { selected in
-            // Double-click: enter a folder, or preview a file.
-            guard let path = selected.first,
-                  let entry = pane.entries.first(where: { $0.path == path })
-            else { return }
-            if entry.isDirectory {
-                Task { await pane.open(entry) }
-            } else {
-                model.preview(pane)
-            }
+        } primaryAction: { _ in
+            activateSelection()
         }
-        .onKeyPress(.space) {
-            model.preview(pane)
-            return .handled
-        }
-        // Once Quick Look is open, follow the selection the way Finder does.
-        // Deliberately only when it is already open — otherwise clicking a
-        // phone file would pull it across the wire unasked.
+        .onKeyPress(.space) { activateSelection(); return .handled }
+        .onKeyPress(.return) { activateSelection(); return .handled }
+        // Selecting one file previews it automatically; the fetch is debounced
+        // so holding an arrow key does not queue one pull per row.
         .onChange(of: pane.selection) {
-            model.previewIfPanelOpen(pane)
+            pane.refreshPreview()
         }
+    }
+
+    /// Space, Return, or double-click: enter the folder, or open the file.
+    private func activateSelection() {
+        guard let path = pane.selection.first,
+              let entry = pane.entries.first(where: { $0.path == path })
+        else { return }
+        Task { await pane.activate(entry) }
     }
 
     /// Mac rows vend a file URL, so dragging to Finder is a real file drag
@@ -368,6 +378,68 @@ private struct FileTable: View {
         case "apk": "shippingbox"
         default: "doc"
         }
+    }
+}
+
+// MARK: - Inline preview
+
+/// Appears automatically when exactly one file is selected.
+private struct PreviewStrip: View {
+    @Bindable var pane: PaneModel
+
+    var body: some View {
+        VStack(spacing: 0) {
+            HStack(spacing: 6) {
+                if let entry = pane.singleSelectedFile {
+                    Text(entry.name).font(.caption).bold().lineLimit(1).truncationMode(.middle)
+                    Text(ByteCountFormatter.string(fromByteCount: entry.size, countStyle: .file))
+                        .font(.caption2).foregroundStyle(.secondary).monospacedDigit()
+                }
+                Spacer()
+                if pane.isPreviewLoading {
+                    ProgressView().controlSize(.small)
+                }
+                Button { pane.showPreviewStrip = false } label: { Image(systemName: "xmark") }
+                    .buttonStyle(.borderless)
+                    .help("Hide the preview")
+            }
+            .padding(.horizontal, 10).padding(.vertical, 5)
+
+            Divider()
+            content
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+        }
+        .frame(height: 210)
+        .background(.background.secondary)
+    }
+
+    @ViewBuilder
+    private var content: some View {
+        if let failure = pane.previewError {
+            placeholder(failure, symbol: "exclamationmark.triangle")
+        } else if let large = pane.previewTooLarge {
+            VStack(spacing: 8) {
+                Text("\(ByteCountFormatter.string(fromByteCount: large.size, countStyle: .file)) — too large to preview automatically")
+                    .font(.caption).foregroundStyle(.secondary)
+                Button("Preview Anyway") { pane.forcePreview(large) }
+                    .controlSize(.small)
+            }
+        } else if let url = pane.previewURL {
+            QuickLookView(url: url).id(url)
+        } else if pane.isPreviewLoading {
+            placeholder("Fetching from phone…", symbol: "arrow.down.circle")
+        } else {
+            placeholder("No preview available", symbol: "eye.slash")
+        }
+    }
+
+    private func placeholder(_ text: String, symbol: String) -> some View {
+        VStack(spacing: 6) {
+            Image(systemName: symbol).font(.title3).foregroundStyle(.tertiary)
+            Text(text).font(.caption).foregroundStyle(.secondary)
+                .multilineTextAlignment(.center)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 }
 
