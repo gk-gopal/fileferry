@@ -66,6 +66,18 @@ cat > "$APP/Contents/Info.plist" <<PLIST
     <key>CFBundleVersion</key><string>${VERSION}</string>
     <key>LSMinimumSystemVersion</key><string>14.0</string>
     <key>NSHighResolutionCapable</key><true/>
+
+    <!-- macOS gates these folders behind a consent prompt. Without a usage
+         description the prompt is bare, which is a poor thing to show a user
+         who is already being asked to trust an unnotarized app. -->
+    <key>NSDocumentsFolderUsageDescription</key>
+    <string>FileFerry needs access to Documents so you can copy files there from your phone, and send files from it.</string>
+    <key>NSDesktopFolderUsageDescription</key>
+    <string>FileFerry needs access to the Desktop so you can copy files there from your phone, and send files from it.</string>
+    <key>NSDownloadsFolderUsageDescription</key>
+    <string>FileFerry needs access to Downloads so you can copy files there from your phone, and send files from it.</string>
+    <key>NSRemovableVolumesUsageDescription</key>
+    <string>FileFerry needs access to external drives and memory cards so you can copy files between them and your phone directly.</string>
     <key>NSHumanReadableCopyright</key><string>MIT licensed</string>
 </dict>
 </plist>
