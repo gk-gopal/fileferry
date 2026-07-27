@@ -16,7 +16,9 @@ struct Favorite: Identifiable, Hashable, Sendable {
 @MainActor
 @Observable
 final class PaneModel {
-    let title: String
+    /// Shown in the sidebar. Starts as the serial for a phone, and is replaced
+    /// with the retail name once the device has been asked for it.
+    var title: String
     let transport: any DeviceTransport
     let favorites: [Favorite]
     let isPhone: Bool

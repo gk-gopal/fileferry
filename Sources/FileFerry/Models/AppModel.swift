@@ -32,6 +32,10 @@ final class AppModel {
     var phonePane: PaneModel?
     var transfer: ActiveTransfer?
     var lastReport: TransferReport?
+    /// How long the last job took, so the summary can report a real rate
+    /// rather than just a byte count.
+    var lastDuration: TimeInterval?
+    private var transferStarted: Date?
     var alertMessage: String?
 
     private var server: ADBServer?
@@ -144,6 +148,12 @@ final class AppModel {
             )
             phonePane = pane
             await pane.load()
+            // A serial number tells the user nothing. Fetched after the first
+            // listing so the pane appears immediately rather than waiting on
+            // an extra round trip.
+            if let name = await transport.deviceName(), !name.isEmpty {
+                pane.title = name
+            }
         } else if let pending = devices.first(where: { $0.state == .unauthorized }) {
             status = .unauthorized(serial: pending.serial)
             phonePane = nil
@@ -201,6 +211,10 @@ final class AppModel {
             label: "\(verb) \(paths.count) item\(paths.count == 1 ? "" : "s")"
         )
 
+        transferStarted = Date()
+        lastReport = nil
+        lastDuration = nil
+
         let sourceTransport = source.transport
         let destinationTransport = destination.transport
 
@@ -227,6 +241,8 @@ final class AppModel {
     private func finish(report: TransferReport?, error: Error?) async {
         transfer = nil
         lastReport = report
+        lastDuration = transferStarted.map { Date().timeIntervalSince($0) }
+        transferStarted = nil
         if let error {
             alertMessage = (error as? LocalizedError)?.errorDescription ?? "\(error)"
         } else if let report, !report.succeeded {

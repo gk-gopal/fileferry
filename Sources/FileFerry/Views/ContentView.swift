@@ -33,7 +33,9 @@ struct ContentView: View {
                 TransferBar(transfer: transfer) { model.cancelTransfer() }
             } else if let report = model.lastReport {
                 Divider()
-                ReportBar(report: report) { model.lastReport = nil }
+                ReportBar(report: report, duration: model.lastDuration) {
+                    model.lastReport = nil
+                }
             }
         }
         .frame(minWidth: 900, minHeight: 460)
@@ -206,6 +208,7 @@ private struct TransferBar: View {
 
 private struct ReportBar: View {
     let report: TransferReport
+    let duration: TimeInterval?
     let dismiss: () -> Void
 
     var body: some View {
@@ -224,7 +227,27 @@ private struct ReportBar: View {
         var parts = ["\(report.transferred.count) transferred"]
         if !report.skipped.isEmpty { parts.append("\(report.skipped.count) skipped") }
         if !report.failed.isEmpty { parts.append("\(report.failed.count) failed") }
-        let bytes = ByteCountFormatter.string(fromByteCount: report.bytesTransferred, countStyle: .file)
-        return parts.joined(separator: ", ") + " — " + bytes
+
+        var detail = ByteCountFormatter.string(
+            fromByteCount: report.bytesTransferred, countStyle: .file)
+        if let duration, duration > 0 {
+            detail += " in \(Self.elapsed(duration))"
+            // Only quote a rate when there is enough data for it to mean
+            // something; a 4 KB file "at 40 KB/s" is just measurement noise.
+            if report.bytesTransferred > 1_000_000 {
+                let rate = Double(report.bytesTransferred) / duration
+                detail += " (\(ByteCountFormatter.string(fromByteCount: Int64(rate), countStyle: .file))/s)"
+            }
+        }
+        return parts.joined(separator: ", ") + " — " + detail
+    }
+
+    static func elapsed(_ seconds: TimeInterval) -> String {
+        if seconds < 1 { return String(format: "%.0f ms", seconds * 1000) }
+        if seconds < 60 { return String(format: "%.1fs", seconds) }
+        let minutes = Int(seconds) / 60
+        let remainder = Int(seconds) % 60
+        if minutes < 60 { return "\(minutes)m \(remainder)s" }
+        return "\(minutes / 60)h \(minutes % 60)m"
     }
 }

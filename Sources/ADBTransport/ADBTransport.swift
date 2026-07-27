@@ -64,6 +64,12 @@ public struct ADBTransport: DeviceTransport {
         await pool.closeAll()
     }
 
+    /// The phone's retail name, e.g. "OnePlus 12R", or nil if it can't be
+    /// determined — the caller then falls back to the serial.
+    public func deviceName() async -> String? {
+        await shell.deviceName()
+    }
+
     private func withSession<T>(_ body: (SyncSession) async throws -> T) async throws -> T {
         let session = try await pool.acquire()
         do {

@@ -109,7 +109,12 @@ case "devices":
         print("no devices — check the cable, and that it carries data rather than only power")
     }
     for device in devices {
-        print("\(device.serial)\t\(device.state.rawValue)")
+        var line = "\(device.serial)\t\(device.state.rawValue)"
+        if device.state == .device {
+            let name = await ShellSession(server: server, serial: device.serial).deviceName()
+            line += "\t\(name ?? "(name unavailable)")"
+        }
+        print(line)
     }
 
 case "ls":

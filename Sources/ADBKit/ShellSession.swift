@@ -68,6 +68,41 @@ public struct ShellSession: Sendable {
         )
     }
 
+    /// A name worth showing a person, rather than a serial number.
+    ///
+    /// Android has no single property for this. `ro.product.model` gives a
+    /// part number on many phones — a OnePlus 12R reports "CPH2585" — so the
+    /// vendor-specific marketing names are tried first. All of them are read
+    /// in one round trip and resolved here.
+    public func deviceName() async -> String? {
+        let properties = [
+            "ro.product.marketname",          // several OEMs
+            "ro.vendor.oplus.market.name",    // OnePlus, Oppo, Realme
+            "ro.config.marketing_name",       // Samsung
+            "ro.product.vendor.marketname",
+        ]
+        let command = (properties + ["ro.product.brand", "ro.product.model"])
+            .map { "getprop \($0)" }
+            .joined(separator: "; ")
+
+        guard let result = try? await run(command), result.succeeded else { return nil }
+        let values = result.stdout
+            .split(separator: "\n", omittingEmptySubsequences: false)
+            .map { $0.trimmingCharacters(in: .whitespaces) }
+
+        // A marketing name, if any vendor supplied one.
+        for value in values.prefix(properties.count) where !value.isEmpty {
+            return value
+        }
+
+        // Otherwise "OnePlus CPH2585" beats a bare part number.
+        let brand = values.count > properties.count ? values[properties.count] : ""
+        let model = values.count > properties.count + 1 ? values[properties.count + 1] : ""
+        guard !model.isEmpty else { return nil }
+        guard !brand.isEmpty, !model.lowercased().hasPrefix(brand.lowercased()) else { return model }
+        return "\(brand.capitalized) \(model)"
+    }
+
     /// Reads the Available column from `df -k <path>`, in bytes.
     ///
     /// Returns nil rather than guessing — a wrong free-space number would let
