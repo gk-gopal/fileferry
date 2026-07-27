@@ -15,7 +15,8 @@ func usage() -> Never {
       ls    <remote-path>
       pull  <remote-path> <local-path>
       push  <local-path>  <remote-path>
-      df    <remote-path>
+      df      <remote-path>
+      volumes                          external drives / SD cards on both sides
 
     Engine-driven (recursive, verified):
       get   <remote-path> <local-dir>   copy phone -> Mac
@@ -150,6 +151,19 @@ case "push":
     }
     await session.close()
     print("\npushed \(humanBytes(sent)) in \(String(format: "%.1f", Date().timeIntervalSince(started)))s")
+
+case "volumes":
+    let phone = ADBTransport(server: server, serial: try await firstReadyDevice())
+    let mac = LocalTransport()
+    print("Mac:")
+    let macVolumes = await mac.externalVolumes()
+    if macVolumes.isEmpty { print("  (no external volumes)") }
+    for v in macVolumes { print("  \(v.name)  \(v.path)  removable: \(v.isRemovable)") }
+    print("Phone:")
+    let phoneVolumes = await phone.externalVolumes()
+    if phoneVolumes.isEmpty { print("  (no SD card or USB storage)") }
+    for v in phoneVolumes { print("  \(v.name)  \(v.path)") }
+    await phone.closeIdleSessions()
 
 case "df":
     guard arguments.count == 2 else { usage() }

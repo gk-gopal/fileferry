@@ -86,6 +86,39 @@ public struct LocalTransport: DeviceTransport {
         try FileManager.default.removeItem(atPath: path)
     }
 
+    /// Mounted volumes: external drives, SD card readers, disk images.
+    /// Without these, an external drive is unreachable and you would have to
+    /// stage files through the Mac's internal disk to get them onto a phone.
+    public func externalVolumes() async -> [VolumeInfo] {
+        let keys: [URLResourceKey] = [
+            .volumeIsRemovableKey, .volumeIsEjectableKey, .volumeIsInternalKey,
+            .volumeIsBrowsableKey, .volumeLocalizedNameKey, .volumeIsRootFileSystemKey,
+        ]
+        guard let urls = FileManager.default.mountedVolumeURLs(
+            includingResourceValuesForKeys: keys,
+            options: [.skipHiddenVolumes]
+        ) else { return [] }
+
+        return urls.compactMap { url in
+            guard let values = try? url.resourceValues(forKeys: Set(keys)),
+                  values.volumeIsBrowsable == true,
+                  // The boot volume is reachable through Home already; listing
+                  // it again as a "location" is just noise.
+                  values.volumeIsRootFileSystem != true
+            else { return nil }
+
+            let removable = (values.volumeIsRemovable ?? false)
+                || (values.volumeIsEjectable ?? false)
+                || (values.volumeIsInternal == false)
+
+            return VolumeInfo(
+                name: values.volumeLocalizedName ?? url.lastPathComponent,
+                path: url.path,
+                isRemovable: removable
+            )
+        }
+    }
+
     /// Free space is a property of the volume, not of one path, so a
     /// destination directory that does not exist yet must not fail preflight.
     /// Walks up to the nearest existing ancestor.

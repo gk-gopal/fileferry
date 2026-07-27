@@ -112,6 +112,31 @@ private struct SidebarView: View {
                             isTargeted: binding(for: favorite.path)))
                     }
 
+                    if !pane.volumes.isEmpty {
+                        sectionHeader(pane.isPhone ? "Storage" : "Locations")
+                        ForEach(pane.volumes) { volume in
+                            Button {
+                                Task { await pane.go(to: volume.path) }
+                            } label: {
+                                Label(
+                                    volume.name,
+                                    systemImage: volume.isRemovable ? "sdcard" : "externaldrive"
+                                )
+                                .font(.callout).lineLimit(1).truncationMode(.middle)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                                .padding(.horizontal, 10).padding(.vertical, 4)
+                                .background(background(for: volume.path), in: RoundedRectangle(cornerRadius: 5))
+                                .overlay { dropOutline(volume.path) }
+                            }
+                            .buttonStyle(.plain)
+                            // Drop straight onto an external drive — no need to
+                            // stage files through the Mac's internal disk.
+                            .modifier(FavoriteDropModifier(
+                                pane: pane, model: model, directory: volume.path,
+                                isTargeted: binding(for: volume.path)))
+                        }
+                    }
+
                     if !pane.pinnedFavorites.isEmpty {
                         sectionHeader("Pinned")
                         ForEach(pane.pinnedFavorites) { pin in

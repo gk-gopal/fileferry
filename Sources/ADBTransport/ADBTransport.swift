@@ -166,6 +166,43 @@ public struct ADBTransport: DeviceTransport {
         }
     }
 
+    /// SD cards and USB-OTG drives mount under /storage with a volume ID like
+    /// `1A2B-3C4D`, entirely outside /sdcard — so without this they are
+    /// unreachable except by typing the path in by hand.
+    public func externalVolumes() async -> [VolumeInfo] {
+        // Not user storage: `emulated` and `self` are how /sdcard is plumbed,
+        // and the rest are system partitions.
+        let systemEntries: Set<String> = [
+            "emulated", "self", "persist", "container", "knox-emulated",
+        ]
+        guard let result = try? await shell.run("ls -1 /storage"), result.succeeded else {
+            return []
+        }
+
+        var volumes: [VolumeInfo] = []
+        for name in result.stdout.split(separator: "\n").map({
+            $0.trimmingCharacters(in: .whitespaces)
+        }) {
+            guard !name.isEmpty, !systemEntries.contains(name) else { continue }
+            let path = "/storage/\(name)"
+            // Only offer it if it can actually be read — an empty listing is
+            // indistinguishable from a permission failure over adb, so an
+            // unreadable mount would otherwise look like an empty SD card.
+            guard let entries = try? await list(path), !entries.isEmpty else { continue }
+            volumes.append(
+                VolumeInfo(name: label(for: name), path: path, isRemovable: true))
+        }
+        return volumes
+    }
+
+    /// "1A2B-3C4D" is a volume ID, not something to show a person.
+    private func label(for name: String) -> String {
+        let isVolumeID = name.count == 9
+            && name.dropFirst(4).first == "-"
+            && name.allSatisfy { $0.isHexDigit || $0 == "-" }
+        return isVolumeID ? "SD Card" : name
+    }
+
     // MARK: - Paths
 
     private func join(_ directory: String, _ name: String) -> String {

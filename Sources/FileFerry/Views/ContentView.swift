@@ -91,6 +91,19 @@ struct ContentView: View {
             Text(model.alertMessage ?? "")
         }
         .task { await model.start() }
+        // A drive plugged in mid-session should appear without a relaunch.
+        .task {
+            let center = NSWorkspace.shared.notificationCenter
+            for await _ in center.notifications(named: NSWorkspace.didMountNotification) {
+                await model.macPane.refreshVolumes()
+            }
+        }
+        .task {
+            let center = NSWorkspace.shared.notificationCenter
+            for await _ in center.notifications(named: NSWorkspace.didUnmountNotification) {
+                await model.macPane.refreshVolumes()
+            }
+        }
     }
 
     /// Names the first few targets — "3 items" alone is how people delete the

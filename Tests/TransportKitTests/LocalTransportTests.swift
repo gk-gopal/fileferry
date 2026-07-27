@@ -69,6 +69,19 @@ func failedWriteLeavesNothing() async throws {
     #expect(!FileManager.default.fileExists(atPath: destination))
 }
 
+@Test("external volumes never include the boot volume")
+func externalVolumesExcludeRoot() async {
+    // The boot disk is reachable through Home already, so listing it as a
+    // "location" would just be noise. Runs anywhere, including CI, since
+    // every machine has exactly one root filesystem.
+    let volumes = await LocalTransport().externalVolumes()
+    #expect(!volumes.contains { $0.path == "/" })
+    for volume in volumes {
+        #expect(volume.path.hasPrefix("/Volumes/"), "unexpected volume path \(volume.path)")
+        #expect(!volume.name.isEmpty)
+    }
+}
+
 @Test("stat reports a missing path as not found")
 func statMissingPath() async {
     await #expect(throws: TransportError.notFound("/no/such/path")) {

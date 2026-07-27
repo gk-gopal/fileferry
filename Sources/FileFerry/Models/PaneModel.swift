@@ -42,6 +42,15 @@ final class PaneModel {
     /// size the strip offers a button instead.
     var autoPreviewLimit: Int64 { Preferences.shared.autoPreviewLimitBytes }
 
+    /// External drives, SD cards, USB sticks. Refreshed on navigation and
+    /// whenever a volume is mounted, so a card inserted mid-session appears
+    /// without restarting.
+    var volumes: [VolumeInfo] = []
+
+    func refreshVolumes() async {
+        volumes = await transport.externalVolumes()
+    }
+
     /// User-pinned folders, on top of the built-in ones.
     var pinnedFavorites: [Favorite] {
         Preferences.shared.pins(isPhone: isPhone).map { path in
@@ -258,6 +267,7 @@ final class PaneModel {
         freeSpace = try? await transport.freeSpace(at: path)
         // Keep the sidebar tree in step with wherever the pane went.
         await tree.reveal(path)
+        await refreshVolumes()
 
         if isPhone {
             Preferences.shared.phoneLastPath = path

@@ -25,6 +25,22 @@ public struct DeviceEntry: Sendable, Equatable, Identifiable {
 /// `transfer(from:to:)` over two of these, with no notion of which is which —
 /// one code path serves both directions, so there is no separate "upload" and
 /// "download" implementation to keep in agreement.
+/// A mounted volume that isn't part of the device's main storage — an SD card
+/// or USB stick on the phone, an external drive or card reader on the Mac.
+public struct VolumeInfo: Sendable, Equatable, Identifiable {
+    public let name: String
+    public let path: String
+    public let isRemovable: Bool
+
+    public var id: String { path }
+
+    public init(name: String, path: String, isRemovable: Bool) {
+        self.name = name
+        self.path = path
+        self.isRemovable = isRemovable
+    }
+}
+
 public protocol DeviceTransport: Sendable {
     func list(_ path: String) async throws -> [DeviceEntry]
     func stat(_ path: String) async throws -> DeviceEntry
@@ -34,12 +50,18 @@ public protocol DeviceTransport: Sendable {
     func delete(_ path: String) async throws
     func freeSpace(at path: String) async throws -> Int64
     func exists(_ path: String) async -> Bool
+
+    /// Volumes beyond the main storage. Empty by default so a transport that
+    /// has no concept of them — the in-memory fake, for one — needs no change.
+    func externalVolumes() async -> [VolumeInfo]
 }
 
 extension DeviceTransport {
     public func exists(_ path: String) async -> Bool {
         (try? await stat(path)) != nil
     }
+
+    public func externalVolumes() async -> [VolumeInfo] { [] }
 }
 
 public enum TransportError: Error, Equatable, Sendable {
