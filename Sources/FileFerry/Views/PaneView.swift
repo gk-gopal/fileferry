@@ -359,6 +359,10 @@ private struct PaneHeader: View {
             Button { showingNewFolder = true } label: { Image(systemName: "folder.badge.plus") }
                 .help("New folder in \(pane.path)")
 
+            Button { model.requestRename(in: pane) } label: { Image(systemName: "pencil") }
+                .disabled(pane.selection.count != 1 || model.isBusy)
+                .help("Rename the selected item")
+
             Button { model.requestDelete(in: pane) } label: { Image(systemName: "trash") }
                 .disabled(pane.selection.isEmpty || model.isBusy)
                 .help("Delete the selection")
@@ -505,6 +509,8 @@ private struct FileTable: View {
                 Button("Open") { activateSelection() }
                 Button("Quick Look") { model.preview(pane) }
                 Divider()
+                Button("Rename…") { model.requestRename(in: pane) }
+                    .disabled(selected.count != 1)
                 Button("Delete…", role: .destructive) { model.requestDelete(in: pane) }
                 Divider()
             }

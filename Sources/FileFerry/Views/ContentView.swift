@@ -61,6 +61,21 @@ struct ContentView: View {
         .sheet(isPresented: $model.isShowingPreview) {
             PreviewSheet(model: model)
         }
+        .sheet(
+            isPresented: Binding(
+                get: { model.renameRequest != nil },
+                set: { if !$0 { model.renameRequest = nil } }
+            )
+        ) {
+            if let request = model.renameRequest {
+                RenameSheet(
+                    entry: request.entry,
+                    onPhone: request.pane.isPhone,
+                    commit: { model.commitRename(to: $0) },
+                    cancel: { model.renameRequest = nil }
+                )
+            }
+        }
         .overlay {
             if model.isPreparingPreview {
                 VStack(spacing: 10) {
@@ -174,6 +189,54 @@ private struct ActionColumn: View {
         let target = direction == .toPhone ? "the phone" : "the Mac"
         let caveat = mode == .move ? " The original is deleted only after the copy is verified." : ""
         return "\(verb) the selection to \(target).\(caveat)"
+    }
+}
+
+private struct RenameSheet: View {
+    let entry: DeviceEntry
+    let onPhone: Bool
+    let commit: (String) -> Void
+    let cancel: () -> Void
+
+    @State private var name: String = ""
+    @FocusState private var focused: Bool
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            Text("Rename \(entry.isDirectory ? "Folder" : "File")").font(.headline)
+            Text("On \(onPhone ? "the phone" : "this Mac")")
+                .font(.caption).foregroundStyle(.secondary)
+
+            TextField("Name", text: $name)
+                .textFieldStyle(.roundedBorder)
+                .frame(width: 340)
+                .focused($focused)
+                .onSubmit { if isValid { commit(name) } }
+
+            if !isValid, !name.isEmpty {
+                Label("A name can't contain a slash.", systemImage: "exclamationmark.triangle")
+                    .font(.caption).foregroundStyle(.orange)
+            }
+
+            HStack {
+                Spacer()
+                Button("Cancel", role: .cancel, action: cancel)
+                    .keyboardShortcut(.cancelAction)
+                Button("Rename") { commit(name) }
+                    .keyboardShortcut(.defaultAction)
+                    .disabled(!isValid || name == entry.name)
+            }
+        }
+        .padding(20)
+        .onAppear {
+            name = entry.name
+            focused = true
+        }
+    }
+
+    private var isValid: Bool {
+        let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        return !trimmed.isEmpty && !trimmed.contains("/")
     }
 }
 

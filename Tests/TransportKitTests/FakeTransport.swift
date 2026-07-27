@@ -139,6 +139,18 @@ public final class FakeTransport: DeviceTransport, @unchecked Sendable {
         }
     }
 
+    public func rename(_ path: String, to newPath: String) async throws {
+        let contents = try lock.withLock {
+            guard let data = files[path] else { throw TransportError.notFound(path) }
+            guard files[newPath] == nil else {
+                throw TransportError.io("\((newPath as NSString).lastPathComponent) already exists.")
+            }
+            files.removeValue(forKey: path)
+            return data
+        }
+        addFile(newPath, contents)
+    }
+
     public func delete(_ path: String) async throws {
         try lock.withLock {
             guard files.removeValue(forKey: path) != nil || directories.remove(path) != nil else {

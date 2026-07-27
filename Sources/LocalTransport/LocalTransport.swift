@@ -86,6 +86,18 @@ public struct LocalTransport: DeviceTransport {
         try FileManager.default.removeItem(atPath: path)
     }
 
+    public func rename(_ path: String, to newPath: String) async throws {
+        guard FileManager.default.fileExists(atPath: path) else {
+            throw TransportError.notFound(path)
+        }
+        // Refuse rather than clobber: moveItem would fail anyway, but this
+        // gives the user the name that is in the way.
+        guard !FileManager.default.fileExists(atPath: newPath) else {
+            throw TransportError.io("\"\((newPath as NSString).lastPathComponent)\" already exists.")
+        }
+        try FileManager.default.moveItem(atPath: path, toPath: newPath)
+    }
+
     /// Mounted volumes: external drives, SD card readers, disk images.
     /// Without these, an external drive is unreachable and you would have to
     /// stage files through the Mac's internal disk to get them onto a phone.

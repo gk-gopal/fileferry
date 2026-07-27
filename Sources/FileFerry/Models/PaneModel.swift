@@ -241,6 +241,22 @@ final class PaneModel {
         isPhone ? PaneModel.phoneDragPrefix + entry.path : entry.path
     }
 
+    func rename(_ entry: DeviceEntry, to newName: String) async throws {
+        let trimmed = newName.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty, !trimmed.contains("/") else {
+            throw TransportError.io("\"\(newName)\" isn't a usable name.")
+        }
+        guard trimmed != entry.name else { return }
+
+        let parent = (entry.path as NSString).deletingLastPathComponent
+        let target = parent.hasSuffix("/") ? parent + trimmed : parent + "/" + trimmed
+        try await transport.rename(entry.path, to: target)
+        await refresh()
+        // Keep the renamed item selected, so it doesn't feel like it vanished.
+        selection = [target]
+        refreshPreview()
+    }
+
     func createFolder(named name: String) async throws {
         let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty, !trimmed.contains("/") else {

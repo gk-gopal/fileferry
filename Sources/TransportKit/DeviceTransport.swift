@@ -48,6 +48,8 @@ public protocol DeviceTransport: Sendable {
     func write(_ path: String, from chunks: AsyncThrowingStream<Data, Error>) async throws
     func mkdir(_ path: String) async throws
     func delete(_ path: String) async throws
+    /// Renames or moves within the same device. Both paths are absolute.
+    func rename(_ path: String, to newPath: String) async throws
     func freeSpace(at path: String) async throws -> Int64
     func exists(_ path: String) async -> Bool
 

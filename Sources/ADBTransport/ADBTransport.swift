@@ -157,6 +157,18 @@ public struct ADBTransport: DeviceTransport {
     /// Free space is a property of the volume, not of one path, so a
     /// destination directory that does not exist yet must not fail preflight.
     /// Walks up to the nearest ancestor `df` can answer for.
+    public func rename(_ path: String, to newPath: String) async throws {
+        // `mv` on Android will happily overwrite, so check first — a rename
+        // that silently destroys another file is a data-loss bug.
+        if await exists(newPath) {
+            throw TransportError.io("\"\((newPath as NSString).lastPathComponent)\" already exists.")
+        }
+        let result = try await shell.run("mv '\(escaped(path))' '\(escaped(newPath))'")
+        guard result.succeeded else {
+            throw TransportError.io(result.stderr.isEmpty ? "Couldn't rename \(path)" : result.stderr)
+        }
+    }
+
     public func freeSpace(at path: String) async throws -> Int64 {
         var candidate = path
         while true {

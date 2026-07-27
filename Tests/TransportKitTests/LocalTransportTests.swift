@@ -82,6 +82,46 @@ func externalVolumesExcludeRoot() async {
     }
 }
 
+@Test("rename moves a file to the new name")
+func renamesFile() async throws {
+    let root = try scratchDirectory()
+    defer { try? FileManager.default.removeItem(atPath: root) }
+
+    let transport = LocalTransport()
+    try Data("hello".utf8).write(to: URL(fileURLWithPath: root + "/before.txt"))
+    try await transport.rename(root + "/before.txt", to: root + "/after.txt")
+
+    #expect(!FileManager.default.fileExists(atPath: root + "/before.txt"))
+    #expect(try Data(contentsOf: URL(fileURLWithPath: root + "/after.txt")) == Data("hello".utf8))
+}
+
+@Test("rename refuses to clobber an existing file")
+func renameRefusesToOverwrite() async throws {
+    let root = try scratchDirectory()
+    defer { try? FileManager.default.removeItem(atPath: root) }
+
+    let transport = LocalTransport()
+    try Data("keep me".utf8).write(to: URL(fileURLWithPath: root + "/taken.txt"))
+    try Data("other".utf8).write(to: URL(fileURLWithPath: root + "/source.txt"))
+
+    await #expect(throws: TransportError.self) {
+        try await transport.rename(root + "/source.txt", to: root + "/taken.txt")
+    }
+    // Neither file may be harmed by a refused rename.
+    #expect(try Data(contentsOf: URL(fileURLWithPath: root + "/taken.txt")) == Data("keep me".utf8))
+    #expect(FileManager.default.fileExists(atPath: root + "/source.txt"))
+}
+
+@Test("renaming something that isn't there is reported, not ignored")
+func renameMissingFile() async throws {
+    let root = try scratchDirectory()
+    defer { try? FileManager.default.removeItem(atPath: root) }
+
+    await #expect(throws: TransportError.notFound(root + "/nope.txt")) {
+        try await LocalTransport().rename(root + "/nope.txt", to: root + "/x.txt")
+    }
+}
+
 @Test("stat reports a missing path as not found")
 func statMissingPath() async {
     await #expect(throws: TransportError.notFound("/no/such/path")) {

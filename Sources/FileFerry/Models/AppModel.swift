@@ -375,6 +375,32 @@ final class AppModel {
         isShowingPreview = true
     }
 
+    // MARK: - Rename
+
+    /// The item awaiting a new name, and which pane it lives in.
+    var renameRequest: (pane: PaneModel, entry: DeviceEntry)?
+
+    func requestRename(in pane: PaneModel) {
+        // Renaming is a one-item operation; with several selected there is no
+        // single name to edit.
+        guard pane.selection.count == 1, let entry = pane.selectedEntries.first, !isBusy else {
+            return
+        }
+        renameRequest = (pane, entry)
+    }
+
+    func commitRename(to newName: String) {
+        guard let request = renameRequest else { return }
+        renameRequest = nil
+        Task { @MainActor [self] in
+            do {
+                try await request.pane.rename(request.entry, to: newName)
+            } catch {
+                alertMessage = (error as? LocalizedError)?.errorDescription ?? "\(error)"
+            }
+        }
+    }
+
     // MARK: - New folder
 
     func createFolder(named name: String, in pane: PaneModel) {
