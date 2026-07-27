@@ -16,7 +16,7 @@ struct PaneView: View {
         HStack(spacing: 0) {
             if sidebarVisible {
                 SidebarView(pane: pane, model: model)
-                    .frame(width: 150)
+                    .frame(width: 200)
                 Divider()
             }
             VStack(spacing: 0) {
@@ -68,12 +68,9 @@ private struct SidebarView: View {
                 Divider().padding(.vertical, 4)
             }
 
-            Text("Favourites")
-                .font(.caption2).bold().foregroundStyle(.tertiary)
-                .padding(.horizontal, 12).padding(.vertical, 6)
-
             ScrollView {
                 VStack(alignment: .leading, spacing: 1) {
+                    sectionHeader("Favourites")
                     ForEach(pane.favorites) { favorite in
                         Button {
                             Task { await pane.go(to: favorite.path) }
@@ -83,38 +80,118 @@ private struct SidebarView: View {
                                 .lineLimit(1)
                                 .frame(maxWidth: .infinity, alignment: .leading)
                                 .padding(.horizontal, 10).padding(.vertical, 4)
-                                .background(background(for: favorite), in: RoundedRectangle(cornerRadius: 5))
-                                .overlay {
-                                    if dropTarget == favorite.path {
-                                        RoundedRectangle(cornerRadius: 5)
-                                            .strokeBorder(Color.accentColor, style: .init(lineWidth: 2, dash: [4, 3]))
-                                    }
-                                }
+                                .background(background(for: favorite.path), in: RoundedRectangle(cornerRadius: 5))
+                                .overlay { dropOutline(favorite.path) }
                         }
                         .buttonStyle(.plain)
                         // Dropping onto a favourite sends files straight there,
                         // without either pane having to navigate.
                         .modifier(FavoriteDropModifier(
                             pane: pane, model: model, directory: favorite.path,
-                            isTargeted: Binding(
-                                get: { dropTarget == favorite.path },
-                                set: { dropTarget = $0 ? favorite.path : nil })))
+                            isTargeted: binding(for: favorite.path)))
                     }
+
+                    sectionHeader("Folders")
+                    FolderTreeView(pane: pane, model: model, dropTarget: $dropTarget)
                 }
-                .padding(.horizontal, 6)
+                .padding(.horizontal, 6).padding(.bottom, 8)
             }
-            Spacer(minLength: 0)
         }
         .frame(maxHeight: .infinity, alignment: .top)
         .background(.quaternary.opacity(0.35))
     }
 
-    private func background(for favorite: Favorite) -> Color {
-        pane.path == favorite.path ? Color.accentColor.opacity(0.18) : .clear
+    private func sectionHeader(_ text: String) -> some View {
+        Text(text)
+            .font(.caption2).bold().foregroundStyle(.tertiary)
+            .padding(.horizontal, 6).padding(.top, 10).padding(.bottom, 3)
+            .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    private func background(for path: String) -> Color {
+        pane.path == path ? Color.accentColor.opacity(0.18) : .clear
+    }
+
+    @ViewBuilder
+    private func dropOutline(_ path: String) -> some View {
+        if dropTarget == path {
+            RoundedRectangle(cornerRadius: 5)
+                .strokeBorder(Color.accentColor, style: .init(lineWidth: 2, dash: [4, 3]))
+        }
+    }
+
+    private func binding(for path: String) -> Binding<Bool> {
+        Binding(
+            get: { dropTarget == path },
+            set: { dropTarget = $0 ? path : nil }
+        )
     }
 
     private func format(_ bytes: Int64) -> String {
         ByteCountFormatter.string(fromByteCount: bytes, countStyle: .file)
+    }
+}
+
+/// The real folder hierarchy, lazily loaded.
+///
+/// Rendered from a flattened row list with an indent level rather than nested
+/// views: a SwiftUI view containing itself needs type erasure to compile, and
+/// flattening scrolls better on a folder with hundreds of subdirectories.
+private struct FolderTreeView: View {
+    @Bindable var pane: PaneModel
+    @Bindable var model: AppModel
+    @Binding var dropTarget: String?
+
+    var body: some View {
+        ForEach(pane.tree.rows) { row in
+            HStack(spacing: 2) {
+                Button {
+                    Task { await pane.tree.toggle(row.path) }
+                } label: {
+                    Image(systemName: row.isExpanded ? "chevron.down" : "chevron.right")
+                        .font(.system(size: 8, weight: .bold))
+                        .foregroundStyle(.secondary)
+                        .frame(width: 12, height: 12)
+                        .opacity(row.hasChildren == false ? 0.15 : 1)
+                }
+                .buttonStyle(.plain)
+                .disabled(row.hasChildren == false)
+
+                Button {
+                    Task { await pane.go(to: row.path) }
+                } label: {
+                    HStack(spacing: 4) {
+                        Image(systemName: pane.path == row.path ? "folder.fill" : "folder")
+                            .font(.system(size: 10))
+                            .foregroundStyle(Color.accentColor)
+                        Text(row.name).font(.caption).lineLimit(1).truncationMode(.middle)
+                        if row.isLoading {
+                            ProgressView().controlSize(.mini).scaleEffect(0.6)
+                        }
+                        Spacer(minLength: 0)
+                    }
+                    .padding(.horizontal, 4).padding(.vertical, 3)
+                    .background(
+                        pane.path == row.path ? Color.accentColor.opacity(0.18) : .clear,
+                        in: RoundedRectangle(cornerRadius: 4)
+                    )
+                    .overlay {
+                        if dropTarget == row.path {
+                            RoundedRectangle(cornerRadius: 4)
+                                .strokeBorder(Color.accentColor, style: .init(lineWidth: 2, dash: [4, 3]))
+                        }
+                    }
+                }
+                .buttonStyle(.plain)
+                // Dropping onto any folder in the tree copies straight there.
+                .modifier(FavoriteDropModifier(
+                    pane: pane, model: model, directory: row.path,
+                    isTargeted: Binding(
+                        get: { dropTarget == row.path },
+                        set: { dropTarget = $0 ? row.path : nil })))
+            }
+            .padding(.leading, CGFloat(row.depth) * 11)
+        }
     }
 }
 

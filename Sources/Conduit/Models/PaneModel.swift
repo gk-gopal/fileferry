@@ -147,6 +147,9 @@ final class PaneModel {
         NSWorkspace.shared.open(cached)
     }
 
+    /// The sidebar folder hierarchy, rooted at the device's top level.
+    let tree: FolderTree
+
     private var backStack: [String] = []
     private var forwardStack: [String] = []
 
@@ -155,13 +158,15 @@ final class PaneModel {
         transport: any DeviceTransport,
         path: String,
         favorites: [Favorite],
-        isPhone: Bool
+        isPhone: Bool,
+        treeRoot: String
     ) {
         self.title = title
         self.transport = transport
         self.path = path
         self.favorites = favorites
         self.isPhone = isPhone
+        self.tree = FolderTree(transport: transport, rootPath: treeRoot)
     }
 
     var canGoBack: Bool { !backStack.isEmpty }
@@ -226,11 +231,14 @@ final class PaneModel {
         do {
             entries = try await transport.list(path)
             selection = []
+            refreshPreview()
         } catch {
             entries = []
             errorMessage = (error as? LocalizedError)?.errorDescription ?? "\(error)"
         }
         freeSpace = try? await transport.freeSpace(at: path)
+        // Keep the sidebar tree in step with wherever the pane went.
+        await tree.reveal(path)
     }
 
     func go(to newPath: String, recordHistory: Bool = true) async {

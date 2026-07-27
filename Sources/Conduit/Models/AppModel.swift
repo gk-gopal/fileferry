@@ -62,7 +62,8 @@ final class AppModel {
             transport: LocalTransport(),
             path: NSHomeDirectory() + "/Downloads",
             favorites: AppModel.macFavorites,
-            isPhone: false
+            isPhone: false,
+            treeRoot: NSHomeDirectory()
         )
     }
 
@@ -127,7 +128,8 @@ final class AppModel {
                 transport: transport,
                 path: "/sdcard",
                 favorites: AppModel.phoneFavorites,
-                isPhone: true
+                isPhone: true,
+                treeRoot: "/sdcard"
             )
             phonePane = pane
             await pane.load()
