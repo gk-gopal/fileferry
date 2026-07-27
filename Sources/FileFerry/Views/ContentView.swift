@@ -1,3 +1,5 @@
+import AppKit
+import Combine
 import SwiftUI
 import TransportKit
 
@@ -92,17 +94,22 @@ struct ContentView: View {
         }
         .task { await model.start() }
         // A drive plugged in mid-session should appear without a relaunch.
-        .task {
-            let center = NSWorkspace.shared.notificationCenter
-            for await _ in center.notifications(named: NSWorkspace.didMountNotification) {
-                await model.macPane.refreshVolumes()
-            }
+        //
+        // Via onReceive rather than `for await … in center.notifications(…)`:
+        // that async sequence yields a non-Sendable Notification, which cannot
+        // cross an isolation boundary under Swift 6. onReceive already
+        // delivers on the main actor.
+        .onReceive(
+            NSWorkspace.shared.notificationCenter
+                .publisher(for: NSWorkspace.didMountNotification)
+        ) { _ in
+            Task { await model.macPane.refreshVolumes() }
         }
-        .task {
-            let center = NSWorkspace.shared.notificationCenter
-            for await _ in center.notifications(named: NSWorkspace.didUnmountNotification) {
-                await model.macPane.refreshVolumes()
-            }
+        .onReceive(
+            NSWorkspace.shared.notificationCenter
+                .publisher(for: NSWorkspace.didUnmountNotification)
+        ) { _ in
+            Task { await model.macPane.refreshVolumes() }
         }
     }
 
