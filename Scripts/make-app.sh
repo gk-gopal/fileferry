@@ -26,6 +26,13 @@ rm -rf "$APP"
 mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
 cp "$BINARY" "$APP/Contents/MacOS/Conduit"
 
+# The icon is drawn in code (Scripts/make-icon.swift) rather than checked in
+# as binary PNGs, so it stays reviewable in a diff.
+echo "Rendering icon…"
+rm -rf "$ROOT/dist/Conduit.iconset"
+swift "$ROOT/Scripts/make-icon.swift" "$ROOT/dist/Conduit.iconset" >/dev/null
+iconutil -c icns "$ROOT/dist/Conduit.iconset" -o "$APP/Contents/Resources/Conduit.icns"
+
 cat > "$APP/Contents/Info.plist" <<PLIST
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
@@ -35,6 +42,7 @@ cat > "$APP/Contents/Info.plist" <<PLIST
     <key>CFBundleDisplayName</key><string>Conduit</string>
     <key>CFBundleIdentifier</key><string>dev.gopalkannan.conduit</string>
     <key>CFBundleExecutable</key><string>Conduit</string>
+    <key>CFBundleIconFile</key><string>Conduit</string>
     <key>CFBundlePackageType</key><string>APPL</string>
     <key>CFBundleShortVersionString</key><string>${VERSION}</string>
     <key>CFBundleVersion</key><string>${VERSION}</string>
