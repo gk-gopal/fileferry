@@ -20,20 +20,31 @@ path, and there are two free channels that sidestep Gatekeeper completely:
 
 | Channel | Gatekeeper prompt? | Cost |
 |---|---|---|
-| `brew install --cask --no-quarantine` from our own tap | none — Homebrew never sets the quarantine flag | free |
-| Build from source (`Scripts/make-app.sh`) | none — quarantine comes from *downloading*, not from running | free |
-| Download the DMG, unsigned | yes, and it got worse in macOS 15 | free |
+| Build from source (`Scripts/make-app.sh`) | **none** — quarantine is set by the *downloader*, not at launch | free |
+| `brew install --cask` from our tap | yes, allow once in System Settings | free |
+| Download the DMG, unsigned | yes, allow once in System Settings | free |
 | Download the DMG, notarized | none | $99/yr |
 
-Since FileFerry's users already have to install `adb` and enable USB
-debugging, they are comfortable with a terminal. A Homebrew tap is the
-idiomatic channel for exactly this audience, so the membership buys very
-little: a double-click install for people who were never going to get through
-the USB-debugging setup anyway.
+**Building from source is the only genuinely friction-free free option.** That
+is a real answer rather than a dodge: FileFerry's users already install `adb`
+and enable USB debugging by hand, so `git clone && Scripts/make-app.sh` is
+within reach for essentially all of them.
 
-Worth paying for only if FileFerry is ever aimed at non-technical users, or if
-Sparkle auto-updates become important — Sparkle needs a signed, notarized
-build.
+Two things weakened the free path recently, and both are worth knowing:
+
+1. **Homebrew removed `--no-quarantine`**, with no replacement, because it did
+   not want to help circumvent Gatekeeper. Installing via a tap no longer
+   avoids the prompt.
+2. **Homebrew is dropping support for casks that fail Gatekeeper checks on
+   1 September 2026** ([Homebrew/brew#20755](https://github.com/Homebrew/brew/issues/20755)).
+   After that, an unnotarized FileFerry may not be distributable through
+   homebrew-cask at all — a personal tap is the fallback, and even that pushes
+   users through System Settings.
+
+So the membership buys more than it appears to: a clean install for everyone,
+continued Homebrew eligibility past September 2026, and Sparkle auto-updates
+(which require a signed, notarized build). Still optional — but "free forever
+with no downside" was too rosy.
 
 **Note the Sequoia change.** Before macOS 15, an unsigned app could be opened
 with Control-click → Open. Apple removed that. On macOS 15 and later the user

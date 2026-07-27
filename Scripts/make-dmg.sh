@@ -26,11 +26,12 @@ ln -s /Applications "$STAGING/Applications"
 cat > "$STAGING/Read Me.txt" <<'TXT'
 FileFerry — copy files between a Mac and an Android phone over USB
 
-EASIER: INSTALL WITH HOMEBREW INSTEAD
-  This avoids the Gatekeeper steps below entirely:
+NO GATEKEEPER PROMPT AT ALL: BUILD IT YOURSELF
+  Quarantine is applied when you download something, not when you run it,
+  so a locally built app is never blocked:
 
-    brew tap gk-gopal/tap
-    brew install --cask --no-quarantine fileferry
+    git clone https://github.com/gk-gopal/fileferry
+    cd fileferry && Scripts/make-app.sh release
 
 INSTALLING FROM THIS DISK IMAGE
   Drag FileFerry to the Applications folder.
