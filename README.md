@@ -6,7 +6,7 @@ FileFerry talks to Android over ADB rather than MTP, which makes it dramatically
 faster on folders with many files — the case where Android File Transfer and
 other MTP-based tools slow to a crawl.
 
-**Status:** in development. Not yet released. The protocol layer works and is
+**Status:** v0.2.0. Early but working — the transfer layer is verified against real hardware. The protocol layer works and is
 verified against real hardware — a 5 GiB file round-trips byte-identical at
 33–42 MB/s, and an 871-entry camera folder lists in 414 ms. See
 [`docs/ADB_PROTOCOL.md`](docs/ADB_PROTOCOL.md) for the full measurements.
