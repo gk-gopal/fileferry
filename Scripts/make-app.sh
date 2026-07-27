@@ -17,10 +17,28 @@ if [ -d /Applications/Xcode.app ]; then
   export DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer
 fi
 
-echo "Building FileFerry ($CONFIGURATION)…"
-swift build -c "$CONFIGURATION" --product FileFerry
+# Build for both architectures by default. A native-only build runs fine on
+# the machine that made it and fails outright on the other kind of Mac, which
+# is exactly the bug you do not want to discover by handing someone a DMG.
+# Set UNIVERSAL=0 for a faster native-only build while developing.
+UNIVERSAL="${UNIVERSAL:-1}"
 
-BINARY="$(swift build -c "$CONFIGURATION" --product FileFerry --show-bin-path)/FileFerry"
+if [ "$UNIVERSAL" = "1" ]; then
+  echo "Building FileFerry ($CONFIGURATION, universal arm64 + x86_64)…"
+  swift build -c "$CONFIGURATION" --product FileFerry --arch arm64 --arch x86_64
+  # --arch redirects output; --show-bin-path reports the native path instead.
+  CONFIG_DIR="$(echo "$CONFIGURATION" | awk '{print toupper(substr($0,1,1)) substr($0,2)}')"
+  BINARY="$ROOT/.build/apple/Products/$CONFIG_DIR/FileFerry"
+else
+  echo "Building FileFerry ($CONFIGURATION, native only)…"
+  swift build -c "$CONFIGURATION" --product FileFerry
+  BINARY="$(swift build -c "$CONFIGURATION" --product FileFerry --show-bin-path)/FileFerry"
+fi
+
+if [ ! -f "$BINARY" ]; then
+  echo "error: built binary not found at $BINARY" >&2
+  exit 1
+fi
 
 rm -rf "$APP"
 mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
