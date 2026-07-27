@@ -1,7 +1,11 @@
 // swift-tools-version:6.0
 import PackageDescription
 
-let strict: [SwiftSetting] = [.swiftLanguageMode(.v6)]
+// Declared package-wide rather than as a per-target SwiftSetting. The
+// multi-architecture build path (`swift build --arch arm64 --arch x86_64`)
+// rejects per-target .swiftLanguageMode on older toolchains, which broke the
+// universal build on CI while working locally.
+let strict: [SwiftSetting] = []
 
 let package = Package(
     name: "FileFerry",
@@ -40,5 +44,6 @@ let package = Package(
             dependencies: ["TransportKit", "LocalTransport"],
             swiftSettings: strict
         ),
-    ]
+    ],
+    swiftLanguageModes: [.v6]
 )
