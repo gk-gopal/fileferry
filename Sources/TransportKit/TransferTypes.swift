@@ -57,6 +57,20 @@ public struct TransferProgress: Sendable, Equatable {
     public let totalFiles: Int
     public let currentFile: String?
 
+    public init(
+        completedBytes: Int64,
+        totalBytes: Int64,
+        completedFiles: Int,
+        totalFiles: Int,
+        currentFile: String?
+    ) {
+        self.completedBytes = completedBytes
+        self.totalBytes = totalBytes
+        self.completedFiles = completedFiles
+        self.totalFiles = totalFiles
+        self.currentFile = currentFile
+    }
+
     public var fraction: Double {
         totalBytes > 0 ? Double(completedBytes) / Double(totalBytes) : 0
     }

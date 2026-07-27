@@ -39,3 +39,4 @@ dist/
 
 # Brainstorming companion session state
 .superpowers/
+dist/

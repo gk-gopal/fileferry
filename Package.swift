@@ -12,6 +12,7 @@ let package = Package(
         .library(name: "LocalTransport", targets: ["LocalTransport"]),
         .library(name: "ADBTransport", targets: ["ADBTransport"]),
         .executable(name: "conduit-cli", targets: ["conduit-cli"]),
+        .executable(name: "Conduit", targets: ["Conduit"]),
     ],
     dependencies: [],
     targets: [
@@ -21,6 +22,11 @@ let package = Package(
         .target(
             name: "ADBTransport",
             dependencies: ["TransportKit", "ADBKit"],
+            swiftSettings: strict
+        ),
+        .executableTarget(
+            name: "Conduit",
+            dependencies: ["ADBKit", "TransportKit", "LocalTransport", "ADBTransport"],
             swiftSettings: strict
         ),
         .executableTarget(
