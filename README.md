@@ -11,6 +11,25 @@ verified against real hardware — a 5 GiB file round-trips byte-identical at
 33–42 MB/s, and an 871-entry camera folder lists in 414 ms. See
 [`docs/ADB_PROTOCOL.md`](docs/ADB_PROTOCOL.md) for the full measurements.
 
+## Installing
+
+**Homebrew (recommended).** Nothing to click past — Homebrew skips the
+quarantine flag, so Gatekeeper never gets involved:
+
+    brew tap gk-gopal/tap
+    brew install --cask --no-quarantine fileferry
+
+**From source.** Locally built apps are never quarantined either:
+
+    git clone https://github.com/gk-gopal/fileferry
+    cd fileferry
+    Scripts/make-app.sh release      # -> dist/FileFerry.app
+
+**From a release DMG.** Works, but FileFerry is not notarized — Apple charges
+$99/yr for that and this project doesn't take your money — so macOS blocks it
+on first launch. On macOS 15 and later you'll need System Settings > Privacy &
+Security > **Open Anyway**. The two options above avoid this.
+
 ## Requirements
 
 - macOS 14 or later

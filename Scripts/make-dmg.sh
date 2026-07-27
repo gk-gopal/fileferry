@@ -26,13 +26,28 @@ ln -s /Applications "$STAGING/Applications"
 cat > "$STAGING/Read Me.txt" <<'TXT'
 FileFerry — copy files between a Mac and an Android phone over USB
 
-INSTALLING
+EASIER: INSTALL WITH HOMEBREW INSTEAD
+  This avoids the Gatekeeper steps below entirely:
+
+    brew tap gk-gopal/tap
+    brew install --cask --no-quarantine fileferry
+
+INSTALLING FROM THIS DISK IMAGE
   Drag FileFerry to the Applications folder.
 
 FIRST LAUNCH
-  This build is not notarized yet, so macOS will refuse to open it on a
-  double-click. Right-click FileFerry in Applications, choose Open, then
-  confirm. You only have to do this once.
+  This build is not notarized, so macOS blocks it the first time.
+
+  macOS 15 (Sequoia) and later:
+    1. Double-click FileFerry. macOS refuses and shows a warning.
+    2. Open System Settings > Privacy & Security.
+    3. Scroll down to "FileFerry was blocked" and click Open Anyway.
+    4. Confirm, and enter your admin password.
+
+  macOS 14 (Sonoma):
+    Right-click FileFerry in Applications, choose Open, then confirm.
+
+  Either way you only do this once.
 
 REQUIREMENTS
   - macOS 14 or later

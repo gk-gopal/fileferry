@@ -13,10 +13,33 @@
 | Homebrew cask | ⛔ needs a public GitHub repo with a tagged release |
 | Sparkle auto-update | ⛔ needs a signed, notarized build and somewhere to host the appcast |
 
-Without notarization, macOS blocks the app on double-click. Users have to
-right-click → Open once. That is acceptable for an alpha shared with a few
-people, and unacceptable for a public release — which is why notarization is
-the first thing to fix once a membership exists.
+## Do we actually need the $99/yr membership?
+
+Not for this audience. Notarization only matters for the **download-a-DMG**
+path, and there are two free channels that sidestep Gatekeeper completely:
+
+| Channel | Gatekeeper prompt? | Cost |
+|---|---|---|
+| `brew install --cask --no-quarantine` from our own tap | none — Homebrew never sets the quarantine flag | free |
+| Build from source (`Scripts/make-app.sh`) | none — quarantine comes from *downloading*, not from running | free |
+| Download the DMG, unsigned | yes, and it got worse in macOS 15 | free |
+| Download the DMG, notarized | none | $99/yr |
+
+Since FileFerry's users already have to install `adb` and enable USB
+debugging, they are comfortable with a terminal. A Homebrew tap is the
+idiomatic channel for exactly this audience, so the membership buys very
+little: a double-click install for people who were never going to get through
+the USB-debugging setup anyway.
+
+Worth paying for only if FileFerry is ever aimed at non-technical users, or if
+Sparkle auto-updates become important — Sparkle needs a signed, notarized
+build.
+
+**Note the Sequoia change.** Before macOS 15, an unsigned app could be opened
+with Control-click → Open. Apple removed that. On macOS 15 and later the user
+must go to System Settings → Privacy & Security → Open Anyway and enter an
+admin password. Any instructions still saying "right-click → Open" are wrong
+for current macOS.
 
 ## Cutting a local build
 
