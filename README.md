@@ -95,6 +95,13 @@ Swift Testing. Fix it once with:
 or set `DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer` for a single
 command.
 
+## Privacy
+
+No analytics, no telemetry, no accounts, and no network connections beyond
+`127.0.0.1:5037` — the local `adb` server. Zero third-party dependencies. No
+record is kept of what you transferred. See [PRIVACY.md](PRIVACY.md), which
+includes the commands to verify all of that yourself.
+
 ## Design
 
 - [Design spec](docs/superpowers/specs/2026-07-26-fileferry-design.md) — what it does and why
