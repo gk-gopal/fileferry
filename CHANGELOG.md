@@ -2,6 +2,23 @@
 
 All notable changes to FileFerry. Dates are ISO 8601.
 
+## 0.2.2 — 2026-07-27
+
+### Added
+
+- **Preview cache can be cleared** from Settings → General, which also shows
+  its size. Previewing a phone file copies it to the Mac so Quick Look can
+  render it, and those copies persist — worth being able to see and remove.
+- **PRIVACY.md**, documenting that there is no analytics, no telemetry, no
+  accounts, and no network traffic beyond `127.0.0.1:5037`, with the commands
+  to verify each claim rather than take it on trust.
+- CI, release and licence badges; `CODEOWNERS`.
+
+### Changed
+
+- `main` is now protected: pull request required, CI must pass, no direct
+  pushes — including for the repository owner.
+
 ## 0.2.1 — 2026-07-27
 
 ### Added
@@ -74,6 +91,7 @@ All notable changes to FileFerry. Dates are ISO 8601.
 - Dual-pane app, transfer engine with verified moves, folder tree, preview,
   drag and drop, sorting.
 
+[0.2.2]: https://github.com/gk-gopal/fileferry/releases/tag/v0.2.2
 [0.2.1]: https://github.com/gk-gopal/fileferry/releases/tag/v0.2.1
 [0.2.0]: https://github.com/gk-gopal/fileferry/releases/tag/v0.2.0
 [0.1.1]: https://github.com/gk-gopal/fileferry/releases/tag/v0.1.1
