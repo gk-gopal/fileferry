@@ -1,5 +1,8 @@
 import Foundation
 import ADBKit
+import TransportKit
+import LocalTransport
+import ADBTransport
 
 // A thin harness over ADBKit, used to verify the protocol layer against real
 // hardware before any UI exists. Not shipped with the app.
@@ -13,6 +16,11 @@ func usage() -> Never {
       pull  <remote-path> <local-path>
       push  <local-path>  <remote-path>
       df    <remote-path>
+
+    Engine-driven (recursive, verified):
+      get   <remote-path> <local-dir>   copy phone -> Mac
+      put   <local-path>  <remote-dir>  copy Mac -> phone
+      mv-get <remote-path> <local-dir>  move phone -> Mac (verifies, then deletes)
     """)
     exit(2)
 }
@@ -152,6 +160,41 @@ case "df":
         exit(1)
     }
     print("\(humanBytes(free)) free at \(arguments[1])")
+
+case "get", "put", "mv-get":
+    guard arguments.count == 3 else { usage() }
+    let phone = ADBTransport(server: server, serial: try await firstReadyDevice())
+    let mac = LocalTransport()
+    let toMac = command != "put"
+    let mode: TransferMode = command == "mv-get" ? .move : .copy
+
+    let job = TransferJob(
+        sources: [arguments[1]],
+        destinationDirectory: arguments[2],
+        mode: mode,
+        conflictPolicy: .overwrite)
+
+    let started = Date()
+    let report = try await TransferEngine().run(
+        job,
+        from: toMac ? phone : mac,
+        to: toMac ? mac : phone,
+        onProgress: { progress in
+            showProgress(done: progress.completedBytes, total: progress.totalBytes, since: started)
+        })
+    await phone.closeIdleSessions()
+
+    let elapsed = Date().timeIntervalSince(started)
+    print("""
+
+    \(report.transferred.count) transferred, \(report.skipped.count) skipped, \
+    \(report.failed.count) failed — \(humanBytes(report.bytesTransferred)) \
+    in \(String(format: "%.1f", elapsed))s
+    """)
+    for failure in report.failed {
+        note("  failed: \(failure.item.source) — \(failure.reason)")
+    }
+    if !report.succeeded { exit(1) }
 
 default:
     usage()

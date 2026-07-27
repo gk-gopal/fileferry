@@ -135,6 +135,84 @@ extension SyncSession {
         }
     }
 
+    /// Pulls a file as a stream of chunks, for callers that want the bytes
+    /// rather than a file on disk.
+    public func readChunks(_ remotePath: String) -> AsyncThrowingStream<Data, Error> {
+        AsyncThrowingStream { continuation in
+            let task = Task {
+                do {
+                    try await stream.write(SyncPacket.request(.recv, path: remotePath))
+                    while true {
+                        let opcode = String(decoding: try await stream.read(exactly: 4), as: UTF8.self)
+                        switch opcode {
+                        case SyncOpcode.data.rawValue:
+                            let length = Int(try await readUInt32())
+                            guard length <= SyncSession.maxChunk else {
+                                throw ADBError.malformedResponse(
+                                    "chunk of \(length) bytes exceeds the 64 KB maximum")
+                            }
+                            continuation.yield(try await stream.read(exactly: length))
+                        case SyncOpcode.done.rawValue:
+                            _ = try await readUInt32()
+                            continuation.finish()
+                            return
+                        case SyncOpcode.fail.rawValue:
+                            throw ADBError.transferFailed(
+                                path: remotePath, reason: try await readSyncMessage())
+                        default:
+                            throw ADBError.malformedResponse(
+                                "unexpected sync opcode \(opcode) during pull")
+                        }
+                    }
+                } catch {
+                    continuation.finish(throwing: error)
+                }
+            }
+            continuation.onTermination = { _ in task.cancel() }
+        }
+    }
+
+    /// Pushes a stream of chunks to a remote path, re-splitting to the 64 KB
+    /// protocol maximum regardless of how the producer chunked them.
+    public func writeChunks(
+        _ remotePath: String,
+        from chunks: AsyncThrowingStream<Data, Error>,
+        mode: UInt32 = 0o644
+    ) async throws {
+        try await stream.write(
+            SyncPacket.request(.send, path: "\(remotePath),\(String(mode, radix: 8))"))
+
+        var pending = Data()
+        func flush(all: Bool) async throws {
+            while pending.count >= SyncSession.maxChunk || (all && !pending.isEmpty) {
+                let size = min(pending.count, SyncSession.maxChunk)
+                let chunk = pending.prefix(size)
+                pending.removeFirst(size)
+                try await stream.write(
+                    SyncPacket(.data, value: UInt32(size)).encoded() + Data(chunk))
+            }
+        }
+
+        for try await chunk in chunks {
+            pending.append(chunk)
+            try await flush(all: false)
+        }
+        try await flush(all: true)
+
+        try await stream.write(
+            SyncPacket(.done, value: UInt32(Date().timeIntervalSince1970)).encoded())
+
+        let opcode = String(decoding: try await stream.read(exactly: 4), as: UTF8.self)
+        switch opcode {
+        case SyncOpcode.okay.rawValue:
+            _ = try await readUInt32()
+        case SyncOpcode.fail.rawValue:
+            throw ADBError.transferFailed(path: remotePath, reason: try await readSyncMessage())
+        default:
+            throw ADBError.malformedResponse("unexpected sync opcode \(opcode) after push")
+        }
+    }
+
     /// Streams a local file to the device.
     ///
     /// The SEND request carries "<path>,<octal mode>" as a single string — a
