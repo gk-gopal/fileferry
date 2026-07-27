@@ -21,20 +21,32 @@ mkdir -p "$STAGING"
 cp -R "$APP" "$STAGING/"
 ln -s /Applications "$STAGING/Applications"
 
+# Ship the installer inside the image so the whole thing is self-contained:
+# mount, run one command, done. Running it as `bash install.sh` rather than
+# double-clicking matters — a downloaded executable is quarantined, but a
+# script read by an interpreter is not blocked.
+cp "$ROOT/Scripts/install.sh" "$STAGING/install.sh"
+
 # A README inside the image, because an unsigned build will be blocked by
 # Gatekeeper and the right-click-Open workaround is not discoverable.
 cat > "$STAGING/Read Me.txt" <<'TXT'
 FileFerry — copy files between a Mac and an Android phone over USB
 
-NO GATEKEEPER PROMPT AT ALL: BUILD IT YOURSELF
-  Quarantine is applied when you download something, not when you run it,
-  so a locally built app is never blocked:
+EASIEST: ONE COMMAND, NO GATEKEEPER PROMPT
+  Open Terminal and paste this while this disk image is mounted:
 
-    git clone https://github.com/gk-gopal/fileferry
-    cd fileferry && Scripts/make-app.sh release
+    bash /Volumes/FileFerry/install.sh
 
-INSTALLING FROM THIS DISK IMAGE
-  Drag FileFerry to the Applications folder.
+  It copies the app to /Applications, clears the quarantine flag so macOS
+  does not block it, checks for adb, and prints the SHA-256 it installed.
+
+  Removing quarantine means macOS stops checking with Apple, so you are
+  trusting whoever gave you this build. Compare the printed SHA-256 with
+  SHA256SUMS.txt on the release page if you want to verify it.
+
+OR DRAG IT ACROSS
+  Drag FileFerry to the Applications folder. You will then have to allow it
+  once, as described below.
 
 FIRST LAUNCH
   This build is not notarized, so macOS blocks it the first time.

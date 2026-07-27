@@ -27,12 +27,50 @@ You'll get a GitHub invite by email, or at
 [github.com/notifications](https://github.com/notifications). Accept it first —
 until you do, every link below 404s.
 
-### Option A — download the built app (about two minutes)
+### Option A — download the DMG, then one command (fastest)
 
 1. Go to <https://github.com/gk-gopal/fileferry/releases>
 2. Download the newest `FileFerry-x.y.z.dmg`
-3. Open it and drag FileFerry to Applications
-4. Follow **Installing** below to get past Gatekeeper once
+3. Paste this, adjusting the filename:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/gk-gopal/fileferry/main/Scripts/install.sh \
+  | bash -s -- ~/Downloads/FileFerry-0.1.1.dmg
+```
+
+That copies the app to `/Applications`, removes the quarantine flag so macOS
+does not block it, warns you if `adb` is missing, prints the SHA-256 it
+installed, and launches it. **No Gatekeeper steps needed.**
+
+Prefer not to pipe a script into bash? The same thing by hand:
+
+```bash
+hdiutil attach ~/Downloads/FileFerry-0.1.1.dmg -nobrowse -quiet -mountpoint /tmp/ff
+cp -R /tmp/ff/FileFerry.app /Applications/
+hdiutil detach /tmp/ff -quiet
+xattr -dr com.apple.quarantine /Applications/FileFerry.app
+open /Applications/FileFerry.app
+```
+
+The `xattr` line is the one that matters — it is what Homebrew's removed
+`--no-quarantine` flag used to do. Skip it and you get the Gatekeeper dance
+described under **Installing** below.
+
+**What you're trusting.** Removing quarantine means macOS stops checking with
+Apple, so you are trusting this build because you know who sent it. The
+installer prints the SHA-256 of what it installed; compare it against
+`SHA256SUMS.txt` on the release page if you want to confirm nothing changed in
+transit.
+
+### Option A2 — one line, once the repo is public
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/gk-gopal/fileferry/main/Scripts/install.sh | bash
+```
+
+With no argument the script finds the latest release, downloads it, and
+installs it. This only works once the repository is public — GitHub returns
+404 for release assets on a private repo.
 
 ### Option B — build it yourself (no Gatekeeper prompt at all)
 
