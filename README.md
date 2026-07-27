@@ -1,5 +1,9 @@
 # FileFerry
 
+[![CI](https://github.com/gk-gopal/fileferry/actions/workflows/ci.yml/badge.svg)](https://github.com/gk-gopal/fileferry/actions/workflows/ci.yml)
+[![Release](https://img.shields.io/github/v/release/gk-gopal/fileferry)](https://github.com/gk-gopal/fileferry/releases/latest)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+
 Copy and move files between a Mac and an Android phone over USB, at USB speed.
 
 FileFerry talks to Android over ADB rather than MTP, which makes it dramatically
