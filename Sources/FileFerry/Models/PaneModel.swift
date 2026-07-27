@@ -35,7 +35,7 @@ final class PaneModel {
     /// Drag payloads for phone paths are carried as plain strings behind this
     /// scheme. Using a custom UTType would mean declaring an exported type in
     /// Info.plist; this needs no registration and is just as unambiguous.
-    static let phoneDragPrefix = "conduit-phone://"
+    static let phoneDragPrefix = "fileferry-phone://"
 
     /// Auto-preview fetches the file, so it is capped. Clicking through a
     /// camera roll should not quietly pull a 1.8 GB video over USB; past this

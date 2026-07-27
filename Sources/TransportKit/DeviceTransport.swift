@@ -18,7 +18,7 @@ public struct DeviceEntry: Sendable, Equatable, Identifiable {
     }
 }
 
-/// Anything Conduit can copy files to and from.
+/// Anything FileFerry can copy files to and from.
 ///
 /// Both sides of a transfer conform: `LocalTransport` for the Mac and
 /// `ADBTransport` for the phone. A transfer is therefore

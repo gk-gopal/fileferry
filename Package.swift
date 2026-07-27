@@ -4,15 +4,15 @@ import PackageDescription
 let strict: [SwiftSetting] = [.swiftLanguageMode(.v6)]
 
 let package = Package(
-    name: "Conduit",
+    name: "FileFerry",
     platforms: [.macOS(.v14)],
     products: [
         .library(name: "ADBKit", targets: ["ADBKit"]),
         .library(name: "TransportKit", targets: ["TransportKit"]),
         .library(name: "LocalTransport", targets: ["LocalTransport"]),
         .library(name: "ADBTransport", targets: ["ADBTransport"]),
-        .executable(name: "conduit-cli", targets: ["conduit-cli"]),
-        .executable(name: "Conduit", targets: ["Conduit"]),
+        .executable(name: "fileferry-cli", targets: ["fileferry-cli"]),
+        .executable(name: "FileFerry", targets: ["FileFerry"]),
     ],
     dependencies: [],
     targets: [
@@ -25,12 +25,12 @@ let package = Package(
             swiftSettings: strict
         ),
         .executableTarget(
-            name: "Conduit",
+            name: "FileFerry",
             dependencies: ["ADBKit", "TransportKit", "LocalTransport", "ADBTransport"],
             swiftSettings: strict
         ),
         .executableTarget(
-            name: "conduit-cli",
+            name: "fileferry-cli",
             dependencies: ["ADBKit", "TransportKit", "LocalTransport", "ADBTransport"],
             swiftSettings: strict
         ),

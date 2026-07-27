@@ -3,21 +3,21 @@
 # Not submittable yet: homebrew-cask requires a signed and notarized artifact,
 # which needs an Apple Developer Program membership. Fill in version and
 # sha256 from a tagged release, then open a PR against homebrew/homebrew-cask.
-cask "conduit" do
+cask "fileferry" do
   version "0.1.0"
-  sha256 :no_check # replace with: shasum -a 256 dist/Conduit-<version>.dmg
+  sha256 :no_check # replace with: shasum -a 256 dist/FileFerry-<version>.dmg
 
-  url "https://github.com/OWNER/conduit/releases/download/v#{version}/Conduit-#{version}.dmg"
-  name "Conduit"
+  url "https://github.com/OWNER/fileferry/releases/download/v#{version}/FileFerry-#{version}.dmg"
+  name "FileFerry"
   desc "Copy files between a Mac and an Android phone over USB"
-  homepage "https://github.com/OWNER/conduit"
+  homepage "https://github.com/OWNER/fileferry"
 
   depends_on macos: ">= :sonoma"
 
-  app "Conduit.app"
+  app "FileFerry.app"
 
   caveats <<~EOS
-    Conduit needs the Android platform-tools:
+    FileFerry needs the Android platform-tools:
 
       brew install --cask android-platform-tools
 
@@ -27,7 +27,7 @@ cask "conduit" do
   EOS
 
   zap trash: [
-    "~/Library/Preferences/dev.gopalkannan.conduit.plist",
-    "~/Library/Caches/dev.gopalkannan.conduit",
+    "~/Library/Preferences/app.fileferry.FileFerry.plist",
+    "~/Library/Caches/app.fileferry.FileFerry",
   ]
 end

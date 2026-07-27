@@ -1,4 +1,4 @@
-# Conduit Plan 1 — Foundation & ADBKit Implementation Plan
+# FileFerry Plan 1 — Foundation & ADBKit Implementation Plan
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
@@ -60,7 +60,7 @@ Sources/ADBKit/
   SyncEntry.swift                      value type: name, size, mode, mtime
   SyncSession.swift                    LIS2 / STA2 / RECV / SEND
   ShellSession.swift                   shell,v2: with a real exit code
-Sources/conduit-cli/
+Sources/fileferry-cli/
   main.swift                           the Task 12 harness
 Tests/ADBKitTests/
   FakeADBServer.swift                  scripted in-memory ByteStream
@@ -96,16 +96,16 @@ import PackageDescription
 let strict: [SwiftSetting] = [.enableUpcomingFeature("StrictConcurrency")]
 
 let package = Package(
-    name: "Conduit",
+    name: "FileFerry",
     platforms: [.macOS(.v14)],
     products: [
         .library(name: "ADBKit", targets: ["ADBKit"]),
-        .executable(name: "conduit-cli", targets: ["conduit-cli"]),
+        .executable(name: "fileferry-cli", targets: ["fileferry-cli"]),
     ],
     dependencies: [],
     targets: [
         .target(name: "ADBKit", swiftSettings: strict),
-        .executableTarget(name: "conduit-cli", dependencies: ["ADBKit"], swiftSettings: strict),
+        .executableTarget(name: "fileferry-cli", dependencies: ["ADBKit"], swiftSettings: strict),
         .testTarget(name: "ADBKitTests", dependencies: ["ADBKit"], swiftSettings: strict),
     ]
 )
@@ -148,7 +148,7 @@ extension ADBError: LocalizedError {
         case .binaryNotFound:
             "Couldn't find adb. Install it with: brew install --cask android-platform-tools"
         case .binaryTooOld(let found, let required):
-            "adb \(found) is too old — Conduit needs \(required) or newer."
+            "adb \(found) is too old — FileFerry needs \(required) or newer."
         case .serverUnavailable(let detail):
             "Couldn't reach the adb server. \(detail)"
         case .deviceNotFound(let serial):
@@ -190,11 +190,11 @@ Expected: PASS, 1 test. If the build fails on `swift-tools-version:6.0`, confirm
 `README.md`:
 
 ```markdown
-# Conduit
+# FileFerry
 
 Copy and move files between a Mac and an Android phone over USB, at USB speed.
 
-Conduit talks to Android over ADB rather than MTP, which makes it dramatically
+FileFerry talks to Android over ADB rather than MTP, which makes it dramatically
 faster on folders with many files — the case where Android File Transfer and
 MTP-based tools slow to a crawl.
 
@@ -213,7 +213,7 @@ MTP-based tools slow to a crawl.
 
 ## Design
 
-See [`docs/superpowers/specs/2026-07-26-conduit-design.md`](docs/superpowers/specs/2026-07-26-conduit-design.md).
+See [`docs/superpowers/specs/2026-07-26-fileferry-design.md`](docs/superpowers/specs/2026-07-26-fileferry-design.md).
 
 ## Licence
 
@@ -743,7 +743,7 @@ Expected: FAIL — `cannot find 'ADBBinary' in scope`.
 import Foundation
 
 /// Locates the system adb binary and checks it is new enough.
-/// Conduit deliberately does not bundle adb — Google's prebuilt platform-tools
+/// FileFerry deliberately does not bundle adb — Google's prebuilt platform-tools
 /// may not be redistributed under the Android SDK terms.
 public struct ADBBinary: Sendable {
     public static let minimumVersion = "34.0.0"
@@ -2069,15 +2069,15 @@ The exit criterion for this plan. Everything so far has been tested against fake
 **Requires the prerequisites at the top of this document.**
 
 **Files:**
-- Create: `Sources/conduit-cli/main.swift`, `docs/ADB_PROTOCOL.md`
+- Create: `Sources/fileferry-cli/main.swift`, `docs/ADB_PROTOCOL.md`
 
 **Interfaces:**
 - Consumes: every public type in `ADBKit`.
-- Produces: a `conduit-cli` executable with subcommands `devices`, `ls <path>`, `pull <remote> <local>`, `push <local> <remote>`.
+- Produces: a `fileferry-cli` executable with subcommands `devices`, `ls <path>`, `pull <remote> <local>`, `push <local> <remote>`.
 
 - [ ] **Step 1: Write the CLI**
 
-`Sources/conduit-cli/main.swift`:
+`Sources/fileferry-cli/main.swift`:
 
 ```swift
 import Foundation
@@ -2085,7 +2085,7 @@ import ADBKit
 
 func usage() -> Never {
     print("""
-    conduit-cli — ADBKit harness
+    fileferry-cli — ADBKit harness
 
       devices
       ls    <remote-path>
@@ -2193,14 +2193,14 @@ Expected: builds clean, no concurrency warnings.
 
 - [ ] **Step 3: Verify against a real device — device detection**
 
-Run: `swift run conduit-cli devices`
+Run: `swift run fileferry-cli devices`
 Expected: your phone's serial and `device`. If it prints `unauthorized`, unlock the phone and accept the prompt. If it prints nothing, the cable may be charge-only.
 
 - [ ] **Step 4: Verify listing, including a large directory**
 
 ```bash
-swift run conduit-cli ls /sdcard
-swift run conduit-cli ls /sdcard/DCIM/Camera
+swift run fileferry-cli ls /sdcard
+swift run fileferry-cli ls /sdcard/DCIM/Camera
 ```
 
 Expected: correct entries with plausible sizes and directory flags. Note the reported millisecond timing on the camera folder — **this is the number that justifies choosing ADB over MTP**, and it belongs in `docs/ADB_PROTOCOL.md`.
@@ -2209,17 +2209,17 @@ Expected: correct entries with plausible sizes and directory flags. Note the rep
 
 ```bash
 # A small round trip first.
-echo "conduit round trip" > /tmp/conduit-test.txt
-swift run conduit-cli push /tmp/conduit-test.txt /sdcard/Download/conduit-test.txt
-swift run conduit-cli pull /sdcard/Download/conduit-test.txt /tmp/conduit-back.txt
-diff /tmp/conduit-test.txt /tmp/conduit-back.txt && echo "round trip OK"
+echo "fileferry round trip" > /tmp/fileferry-test.txt
+swift run fileferry-cli push /tmp/fileferry-test.txt /sdcard/Download/fileferry-test.txt
+swift run fileferry-cli pull /sdcard/Download/fileferry-test.txt /tmp/fileferry-back.txt
+diff /tmp/fileferry-test.txt /tmp/fileferry-back.txt && echo "round trip OK"
 
 # Then the 4 GB boundary that v1 opcodes get wrong.
-mkfile -n 5g /tmp/conduit-big.bin
-swift run conduit-cli push /tmp/conduit-big.bin /sdcard/Download/conduit-big.bin
-swift run conduit-cli ls /sdcard/Download   # must report ~5 GB, not a wrapped value
-swift run conduit-cli pull /sdcard/Download/conduit-big.bin /tmp/conduit-big-back.bin
-shasum -a 256 /tmp/conduit-big.bin /tmp/conduit-big-back.bin   # hashes must match
+mkfile -n 5g /tmp/fileferry-big.bin
+swift run fileferry-cli push /tmp/fileferry-big.bin /sdcard/Download/fileferry-big.bin
+swift run fileferry-cli ls /sdcard/Download   # must report ~5 GB, not a wrapped value
+swift run fileferry-cli pull /sdcard/Download/fileferry-big.bin /tmp/fileferry-big-back.bin
+shasum -a 256 /tmp/fileferry-big.bin /tmp/fileferry-big-back.bin   # hashes must match
 ```
 
 Expected: `diff` silent, both hashes equal, and the 5 GB file reported at its true size. A size near 705 MB instead of 5 GB means a v1 opcode leaked in — `5,000,000,000 mod 2^32`.
@@ -2227,8 +2227,8 @@ Expected: `diff` silent, both hashes equal, and the 5 GB file reported at its tr
 - [ ] **Step 6: Clean up the device**
 
 ```bash
-adb shell rm /sdcard/Download/conduit-test.txt /sdcard/Download/conduit-big.bin
-rm -f /tmp/conduit-test.txt /tmp/conduit-back.txt /tmp/conduit-big.bin /tmp/conduit-big-back.bin
+adb shell rm /sdcard/Download/fileferry-test.txt /sdcard/Download/fileferry-big.bin
+rm -f /tmp/fileferry-test.txt /tmp/fileferry-back.txt /tmp/fileferry-big.bin /tmp/fileferry-big-back.bin
 ```
 
 - [ ] **Step 7: Record what you learned**
@@ -2238,7 +2238,7 @@ Write `docs/ADB_PROTOCOL.md` covering: the two framing layers and how they diffe
 - [ ] **Step 8: Commit**
 
 ```bash
-git add Sources/conduit-cli docs/ADB_PROTOCOL.md
+git add Sources/fileferry-cli docs/ADB_PROTOCOL.md
 git commit -m "feat: add CLI harness and document the adb wire protocol"
 ```
 
@@ -2248,8 +2248,8 @@ git commit -m "feat: add CLI harness and document the adb wire protocol"
 
 - [ ] `swift test` passes with 38 tests and no strict-concurrency warnings
 - [ ] CI is green on `macos-15`
-- [ ] `conduit-cli devices` detects a real phone and distinguishes `unauthorized` from `device`
-- [ ] `conduit-cli ls /sdcard/DCIM/Camera` returns a large directory in under a second
+- [ ] `fileferry-cli devices` detects a real phone and distinguishes `unauthorized` from `device`
+- [ ] `fileferry-cli ls /sdcard/DCIM/Camera` returns a large directory in under a second
 - [ ] A 5 GB file round-trips with matching SHA-256 and a correctly reported size
 - [ ] A failed pull leaves no partial file on disk
 - [ ] `docs/ADB_PROTOCOL.md` records the offsets and the measured numbers

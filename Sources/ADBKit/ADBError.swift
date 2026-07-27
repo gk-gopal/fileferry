@@ -30,7 +30,7 @@ extension ADBError: LocalizedError {
         case .binaryNotFound:
             "Couldn't find adb. Install it with: brew install --cask android-platform-tools"
         case .binaryTooOld(let found, let required):
-            "adb \(found) is too old — Conduit needs \(required) or newer."
+            "adb \(found) is too old — FileFerry needs \(required) or newer."
         case .serverUnavailable(let detail):
             "Couldn't reach the adb server. \(detail)"
         case .deviceNotFound(let serial):

@@ -2,7 +2,7 @@ import Foundation
 import Observation
 import TransportKit
 
-/// The small amount of state Conduit keeps between launches.
+/// The small amount of state FileFerry keeps between launches.
 ///
 /// Deliberately narrow: pinned folders, where each pane was last looking, and
 /// a handful of settings. Nothing records *what* was transferred, when, or to

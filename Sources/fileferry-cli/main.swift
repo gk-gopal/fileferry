@@ -9,7 +9,7 @@ import ADBTransport
 
 func usage() -> Never {
     print("""
-    conduit-cli — ADBKit harness
+    fileferry-cli — ADBKit harness
 
       devices
       ls    <remote-path>

@@ -4,7 +4,7 @@ import LocalTransport
 @testable import TransportKit
 
 private func scratchDirectory() throws -> String {
-    let path = NSTemporaryDirectory() + "conduit-local-\(UUID().uuidString)"
+    let path = NSTemporaryDirectory() + "fileferry-local-\(UUID().uuidString)"
     try FileManager.default.createDirectory(atPath: path, withIntermediateDirectories: true)
     return path
 }

@@ -2,7 +2,7 @@ import Foundation
 
 /// Locates the system adb binary and checks it is new enough.
 ///
-/// Conduit deliberately does not bundle adb: Google's prebuilt platform-tools
+/// FileFerry deliberately does not bundle adb: Google's prebuilt platform-tools
 /// may not be redistributed under the Android SDK terms.
 public struct ADBBinary: Sendable, Equatable {
     public static let minimumVersion = "34.0.0"

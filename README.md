@@ -1,8 +1,8 @@
-# Conduit
+# FileFerry
 
 Copy and move files between a Mac and an Android phone over USB, at USB speed.
 
-Conduit talks to Android over ADB rather than MTP, which makes it dramatically
+FileFerry talks to Android over ADB rather than MTP, which makes it dramatically
 faster on folders with many files — the case where Android File Transfer and
 other MTP-based tools slow to a crawl.
 
@@ -36,7 +36,7 @@ command.
 
 ## Design
 
-- [Design spec](docs/superpowers/specs/2026-07-26-conduit-design.md) — what it does and why
+- [Design spec](docs/superpowers/specs/2026-07-26-fileferry-design.md) — what it does and why
 - [Plan 1: Foundation & ADBKit](docs/superpowers/plans/2026-07-26-foundation-and-adbkit.md)
 - [UI mockups](docs/mockups/) — open the HTML files in a browser
 

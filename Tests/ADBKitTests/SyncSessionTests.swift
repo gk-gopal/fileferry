@@ -112,7 +112,7 @@ private func recvDone() -> Data {
 
 private func scratchURL() -> URL {
     URL(fileURLWithPath: NSTemporaryDirectory())
-        .appendingPathComponent("conduit-test-\(UUID().uuidString).bin")
+        .appendingPathComponent("fileferry-test-\(UUID().uuidString).bin")
 }
 
 @Test("pull writes every chunk to disk in order")

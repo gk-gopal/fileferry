@@ -1,5 +1,5 @@
 #!/usr/bin/env swift
-// Renders Conduit's app icon into an .iconset, for iconutil to compile.
+// Renders FileFerry's app icon into an .iconset, for iconutil to compile.
 //
 // Drawn in code rather than checked in as binary PNGs so the icon is
 // reviewable in a diff and regenerates at any size.
@@ -10,7 +10,7 @@ import Foundation
 let sizes = [16, 32, 64, 128, 256, 512, 1024]
 let outputDirectory = URL(fileURLWithPath: CommandLine.arguments.count > 1
     ? CommandLine.arguments[1]
-    : "dist/Conduit.iconset")
+    : "dist/FileFerry.iconset")
 
 try? FileManager.default.createDirectory(at: outputDirectory, withIntermediateDirectories: true)
 

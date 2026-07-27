@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Assembles Conduit.app around the SPM-built executable.
+# Assembles FileFerry.app around the SPM-built executable.
 #
 # SwiftPM cannot produce a macOS .app bundle, and hand-maintaining an
 # .xcodeproj means a merge-conflict magnet in a repo that otherwise builds
@@ -8,7 +8,7 @@ set -euo pipefail
 
 CONFIGURATION="${1:-release}"
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-APP="$ROOT/dist/Conduit.app"
+APP="$ROOT/dist/FileFerry.app"
 VERSION="$(git -C "$ROOT" describe --tags --always 2>/dev/null || echo "0.1.0-dev")"
 
 # Command Line Tools does not ship Swift Testing, and its SDK differs from
@@ -17,32 +17,32 @@ if [ -d /Applications/Xcode.app ]; then
   export DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer
 fi
 
-echo "Building Conduit ($CONFIGURATION)…"
-swift build -c "$CONFIGURATION" --product Conduit
+echo "Building FileFerry ($CONFIGURATION)…"
+swift build -c "$CONFIGURATION" --product FileFerry
 
-BINARY="$(swift build -c "$CONFIGURATION" --product Conduit --show-bin-path)/Conduit"
+BINARY="$(swift build -c "$CONFIGURATION" --product FileFerry --show-bin-path)/FileFerry"
 
 rm -rf "$APP"
 mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
-cp "$BINARY" "$APP/Contents/MacOS/Conduit"
+cp "$BINARY" "$APP/Contents/MacOS/FileFerry"
 
 # The icon is drawn in code (Scripts/make-icon.swift) rather than checked in
 # as binary PNGs, so it stays reviewable in a diff.
 echo "Rendering icon…"
-rm -rf "$ROOT/dist/Conduit.iconset"
-swift "$ROOT/Scripts/make-icon.swift" "$ROOT/dist/Conduit.iconset" >/dev/null
-iconutil -c icns "$ROOT/dist/Conduit.iconset" -o "$APP/Contents/Resources/Conduit.icns"
+rm -rf "$ROOT/dist/FileFerry.iconset"
+swift "$ROOT/Scripts/make-icon.swift" "$ROOT/dist/FileFerry.iconset" >/dev/null
+iconutil -c icns "$ROOT/dist/FileFerry.iconset" -o "$APP/Contents/Resources/FileFerry.icns"
 
 cat > "$APP/Contents/Info.plist" <<PLIST
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-    <key>CFBundleName</key><string>Conduit</string>
-    <key>CFBundleDisplayName</key><string>Conduit</string>
-    <key>CFBundleIdentifier</key><string>dev.gopalkannan.conduit</string>
-    <key>CFBundleExecutable</key><string>Conduit</string>
-    <key>CFBundleIconFile</key><string>Conduit</string>
+    <key>CFBundleName</key><string>FileFerry</string>
+    <key>CFBundleDisplayName</key><string>FileFerry</string>
+    <key>CFBundleIdentifier</key><string>app.fileferry.FileFerry</string>
+    <key>CFBundleExecutable</key><string>FileFerry</string>
+    <key>CFBundleIconFile</key><string>FileFerry</string>
     <key>CFBundlePackageType</key><string>APPL</string>
     <key>CFBundleShortVersionString</key><string>${VERSION}</string>
     <key>CFBundleVersion</key><string>${VERSION}</string>

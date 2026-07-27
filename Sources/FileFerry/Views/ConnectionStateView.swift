@@ -84,7 +84,7 @@ struct ConnectionStateView: View {
     private var title: String {
         switch model.status {
         case .starting: "Looking for your phone…"
-        case .adbMissing: "Conduit needs Android platform-tools"
+        case .adbMissing: "FileFerry needs Android platform-tools"
         case .adbTooOld: "That version of adb is too old"
         case .serverUnavailable: "Couldn't reach the adb server"
         case .noDevice: "No phone connected"
@@ -99,9 +99,9 @@ struct ConnectionStateView: View {
         case .starting:
             "Starting the adb server."
         case .adbMissing:
-            "Conduit uses Android's adb to talk to your phone over USB. Install it with Homebrew, then try again."
+            "FileFerry uses Android's adb to talk to your phone over USB. Install it with Homebrew, then try again."
         case .adbTooOld(let found, let required):
-            "Found adb \(found), but Conduit needs \(required) or newer. Upgrade it and try again."
+            "Found adb \(found), but FileFerry needs \(required) or newer. Upgrade it and try again."
         case .serverUnavailable(let reason):
             reason
         case .noDevice:

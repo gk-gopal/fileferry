@@ -10,7 +10,7 @@ import SwiftUI
 enum PreviewCache {
     static let directory: URL = {
         let base = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask)[0]
-            .appendingPathComponent("dev.gopalkannan.conduit/preview", isDirectory: true)
+            .appendingPathComponent("app.fileferry.FileFerry/preview", isDirectory: true)
         try? FileManager.default.createDirectory(at: base, withIntermediateDirectories: true)
         return base
     }()

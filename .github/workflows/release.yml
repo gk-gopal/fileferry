@@ -50,7 +50,7 @@ jobs:
       #   run: |
       #     codesign --force --options runtime --timestamp \
       #       --sign "Developer ID Application: ($TEAM_ID)" \
-      #       dist/Conduit.app
+      #       dist/FileFerry.app
       #
       # - name: Notarize and staple
       #   env:
@@ -59,10 +59,10 @@ jobs:
       #     KEY: ${{ secrets.NOTARY_KEY }}
       #   run: |
       #     echo "$KEY" > notary.p8
-      #     ditto -c -k --keepParent dist/Conduit.app dist/Conduit.zip
-      #     xcrun notarytool submit dist/Conduit.zip \
+      #     ditto -c -k --keepParent dist/FileFerry.app dist/FileFerry.zip
+      #     xcrun notarytool submit dist/FileFerry.zip \
       #       --key notary.p8 --key-id "$KEY_ID" --issuer "$ISSUER_ID" --wait
-      #     xcrun stapler staple dist/Conduit.app
+      #     xcrun stapler staple dist/FileFerry.app
       #     rm notary.p8
 
       - name: Build DMG
@@ -78,7 +78,7 @@ jobs:
             dist/*.dmg
             dist/SHA256SUMS.txt
           body: |
-            ## Conduit ${{ github.ref_name }}
+            ## FileFerry ${{ github.ref_name }}
 
             Copy and move files between a Mac and an Android phone over USB.
 
@@ -88,4 +88,4 @@ jobs:
             - USB debugging enabled on the phone
 
             > This build is not notarized. On first launch, right-click
-            > Conduit in Applications and choose **Open**.
+            > FileFerry in Applications and choose **Open**.

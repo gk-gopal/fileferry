@@ -1,4 +1,4 @@
-# Releasing Conduit
+# Releasing FileFerry
 
 ## What works today, and what is blocked
 
@@ -21,8 +21,8 @@ the first thing to fix once a membership exists.
 ## Cutting a local build
 
 ```bash
-Scripts/make-app.sh release       # -> dist/Conduit.app
-Scripts/make-dmg.sh 0.1.0         # -> dist/Conduit-0.1.0.dmg
+Scripts/make-app.sh release       # -> dist/FileFerry.app
+Scripts/make-dmg.sh 0.1.0         # -> dist/FileFerry-0.1.0.dmg
 ```
 
 ## Manual test checklist
@@ -63,7 +63,7 @@ is covered by CI. Run these against a real phone before tagging.
    ```
 4. Verify on a machine that has never seen your certificate:
    ```bash
-   spctl -a -vvv /Applications/Conduit.app     # expect: accepted, Notarized Developer ID
+   spctl -a -vvv /Applications/FileFerry.app     # expect: accepted, Notarized Developer ID
    ```
 
 `spctl` on your own build machine is not a valid check — the certificate is
@@ -71,10 +71,10 @@ already trusted there. Use a clean VM or another Mac.
 
 ## Homebrew cask
 
-`Casks/conduit.rb` in this repo is the template. Once a release is tagged and
+`Casks/fileferry.rb` in this repo is the template. Once a release is tagged and
 notarized, fill in the version and SHA-256 and open a PR against
 `homebrew/homebrew-cask`:
 
 ```bash
-shasum -a 256 dist/Conduit-0.1.0.dmg
+shasum -a 256 dist/FileFerry-0.1.0.dmg
 ```

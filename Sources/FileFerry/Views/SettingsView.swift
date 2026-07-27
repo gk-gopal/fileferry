@@ -16,7 +16,7 @@ struct SettingsView: View {
     private var general: some View {
         Form {
             Toggle("Reopen the last folder on launch", isOn: $preferences.restoreLastFolder)
-            Text("Conduit remembers pinned folders and where each pane was looking. It never records what you transferred.")
+            Text("FileFerry remembers pinned folders and where each pane was looking. It never records what you transferred.")
                 .font(.caption).foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
 
@@ -73,7 +73,7 @@ struct SettingsView: View {
                     Button("Choose…") { chooseADB() }
                 }
             }
-            Text("Leave empty to search ANDROID_HOME, Homebrew, then /usr/local. Conduit does not bundle adb — Google's platform-tools may not be redistributed.")
+            Text("Leave empty to search ANDROID_HOME, Homebrew, then /usr/local. FileFerry does not bundle adb — Google's platform-tools may not be redistributed.")
                 .font(.caption).foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
 

@@ -1,6 +1,6 @@
-# The ADB wire protocol, as Conduit uses it
+# The ADB wire protocol, as FileFerry uses it
 
-Conduit does not shell out to `adb`. It lets the `adb` binary run as the
+FileFerry does not shell out to `adb`. It lets the `adb` binary run as the
 *server* — which owns the USB connection, the part genuinely not worth
 reimplementing — and then speaks the server's own protocol on
 `127.0.0.1:5037`. This is what Android Studio does.
@@ -29,7 +29,7 @@ A host request is the 4 hex digits followed by the ASCII service name:
 0016host:transport:1A2B3C
 ```
 
-## Services Conduit uses
+## Services FileFerry uses
 
 | Service | Purpose |
 |---|---|
@@ -101,7 +101,7 @@ single string:
 ### Chunk size
 
 `DATA` payloads are capped at **65536 bytes**. Larger is a protocol violation.
-Conduit both enforces this when sending and rejects oversized frames when
+FileFerry both enforces this when sending and rejects oversized frames when
 receiving.
 
 ## `shell,v2:` framing
@@ -117,7 +117,7 @@ then the payload.
 
 ## Measured performance
 
-Measured 2026-07-27 with `conduit-cli` built in release mode. Host: macOS 26,
+Measured 2026-07-27 with `fileferry-cli` built in release mode. Host: macOS 26,
 Apple Silicon. Device: OnePlus CPH2585, adb 37.0.1.
 
 ### Directory listing

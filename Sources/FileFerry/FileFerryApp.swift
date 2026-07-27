@@ -1,12 +1,12 @@
 import SwiftUI
 
 @main
-struct ConduitApp: App {
+struct FileFerryApp: App {
     @State private var model = AppModel()
     @State private var preferences = Preferences.shared
 
     var body: some Scene {
-        Window("Conduit", id: "main") {
+        Window("FileFerry", id: "main") {
             ContentView(model: model)
         }
         .defaultSize(width: 1240, height: 680)

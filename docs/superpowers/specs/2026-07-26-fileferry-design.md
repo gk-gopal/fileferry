@@ -1,11 +1,11 @@
-# Conduit — Design Spec
+# FileFerry — Design Spec
 
 **Date:** 2026-07-26
 **Status:** Approved, ready for implementation planning
 
 A native macOS app for copying and moving files between a Mac and an Android device over USB, using ADB as the transport.
 
-> The name `Conduit` is provisional. It appears in the bundle identifier (`dev.gopalkannan.conduit`), the repo name, and the app name. Changing it is a find-and-replace; doing so after a tagged release is not. Check it against a trademark search before any public release.
+> The name `FileFerry` is provisional. It appears in the bundle identifier (`app.fileferry.FileFerry`), the repo name, and the app name. Changing it is a find-and-replace; doing so after a tagged release is not. Check it against a trademark search before any public release.
 
 ---
 
@@ -97,7 +97,7 @@ Consequences: no Apple Developer Program membership is required to build or cont
 Four modules, dependencies pointing one direction.
 
 ```
-Conduit (app, SwiftUI)
+FileFerry (app, SwiftUI)
     │
     ▼
 TransportKit ──────────┐   DeviceTransport, TransferEngine, ConflictPolicy
@@ -219,7 +219,7 @@ The two sides are asymmetric because macOS pushes filesystem events and Android 
 |---|---|---|
 | A file changes underneath | Instant, via FSEvents | Not detected |
 | Navigating to the folder | Instant | Typically < 100 ms |
-| An operation Conduit performed | Instant | Instant — we know what changed |
+| An operation FileFerry performed | Instant | Instant — we know what changed |
 | Window regains focus | — | Re-listed |
 | ⌘R | Instant | Re-listed |
 | Background polling | Not needed | Opt-in, off by default |
@@ -244,7 +244,7 @@ Every error states what happened and offers an action. Four rules govern the des
 
 | State | What the user sees |
 |---|---|
-| `adb` not found | "Conduit needs Android platform-tools", with the `brew` command to copy and a "Locate adb…" chooser |
+| `adb` not found | "FileFerry needs Android platform-tools", with the `brew` command to copy and a "Locate adb…" chooser |
 | `adb` older than 34 | Version shown, upgrade command offered |
 | Port 5037 held by a foreign process | Diagnosis naming the process. We adopt an existing `adb` server rather than fighting it, and **never** silently `kill-server` — that would break a user's Android Studio session mid-debug |
 | No device | Three-step USB debugging walkthrough, with a disclosure covering charge-only cables and USB hubs |
@@ -294,11 +294,11 @@ UI testing stays minimal — XCUITest is slow and flaky, and the logic worth tes
 ## 10. Repository layout
 
 ```
-conduit/
+fileferry/
 ├── .github/workflows/{ci.yml,release.yml}
-├── Conduit.xcodeproj
+├── FileFerry.xcodeproj
 ├── Sources/
-│   ├── Conduit/{ConduitApp.swift,Views/,Models/,DragDrop/,Resources/}
+│   ├── FileFerry/{FileFerryApp.swift,Views/,Models/,DragDrop/,Resources/}
 │   ├── ADBKit/
 │   ├── TransportKit/
 │   ├── ADBTransport/
@@ -320,7 +320,7 @@ conduit/
 
 These do not block implementation; they block a public release.
 
-1. **Final name.** `Conduit` is provisional and needs a trademark check.
+1. **Final name.** `FileFerry` is provisional and needs a trademark check.
 2. **GitHub account and repo visibility.** `gh` is not installed locally (`brew install gh`).
 3. **Apple Developer Program membership**, required only at Phase 6 for Developer ID signing and notarization.
 4. **Homebrew** is not installed on the development machine and is needed for `adb` itself.
