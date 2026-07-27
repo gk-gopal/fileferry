@@ -13,31 +13,58 @@ verified against real hardware — a 5 GiB file round-trips byte-identical at
 
 ## Installing
 
-FileFerry is not notarized — Apple charges $99/yr for that and this project
-doesn't take your money — so anything you *download* gets quarantined by macOS
-and blocked on first launch.
+```bash
+curl -fsSL https://raw.githubusercontent.com/gk-gopal/fileferry/main/Scripts/install.sh | bash
+```
 
-**From source (no Gatekeeper prompt at all).** Quarantine is applied by the
-downloader, not at launch, so a locally built app is never flagged:
+That's the whole thing. It downloads the latest release, installs it to
+`/Applications`, and launches it — no Gatekeeper prompt to click past.
 
-    git clone https://github.com/gk-gopal/fileferry
-    cd fileferry
-    Scripts/make-app.sh release      # -> dist/FileFerry.app
+<details>
+<summary>What that script does, and what you're trusting</summary>
 
-**Homebrew.** Convenient, but you still have to allow the app once:
+FileFerry is not notarized. Apple charges $99/yr for that and this project
+doesn't take your money, so macOS would normally quarantine the download and
+block the first launch. The installer clears that quarantine flag, which is
+what Homebrew's now-removed `--no-quarantine` did.
 
-    brew tap gk-gopal/tap
-    brew install --cask fileferry
+That means macOS stops checking with Apple, so you are trusting this build
+instead. The installer prints the SHA-256 of what it installed; compare it
+against `SHA256SUMS.txt` on the [releases
+page](https://github.com/gk-gopal/fileferry/releases). The script itself is
+[right here](Scripts/install.sh) — read it before piping it into your shell,
+as you should with any such command.
 
-**From a release DMG.** Same as Homebrew — allow it once.
+It also checks your macOS version, warns if `adb` is missing, and prints the
+phone setup steps.
 
-To allow a blocked app on **macOS 15 or later**: System Settings → Privacy &
-Security → scroll to "FileFerry was blocked" → **Open Anyway** → password. On
-**macOS 14**: right-click → Open → confirm.
+</details>
 
-> Homebrew's `--no-quarantine` flag used to skip this. It has been removed
-> with no replacement, and Homebrew is
-> [dropping casks that fail Gatekeeper checks on 1 September 2026](https://github.com/Homebrew/brew/issues/20755).
+### Other ways
+
+**From source** — no quarantine at all, since it's applied to things you
+*download*, not things you build. Needs Xcode:
+
+```bash
+git clone https://github.com/gk-gopal/fileferry
+cd fileferry && Scripts/make-app.sh release      # -> dist/FileFerry.app
+```
+
+**Homebrew** — works, but it's three commands and *still* leaves you with the
+Gatekeeper prompt, because Homebrew no longer has a way to skip quarantine:
+
+```bash
+brew tap gk-gopal/tap
+brew trust gk-gopal/tap        # required for third-party taps
+brew install --cask fileferry
+```
+
+You'll then need System Settings → Privacy & Security → **Open Anyway** on
+first launch (macOS 15+), or right-click → Open (macOS 14).
+
+> Homebrew removed `--no-quarantine` with no replacement, and is
+> [dropping casks that fail Gatekeeper checks on 1 September 2026](https://github.com/Homebrew/brew/issues/20755),
+> so this route may stop working unless FileFerry gets notarized.
 
 ## Requirements
 
