@@ -95,3 +95,135 @@ func statsFile() async throws {
     #expect(entry.size == 9_000_000_000)
     #expect(entry.name == "/sdcard/huge.iso")
 }
+
+// MARK: - Pull
+
+/// A DATA frame: opcode, length, payload.
+private func dataFrame(_ payload: Data) -> Data {
+    Data("DATA".utf8)
+        + Data(withUnsafeBytes(of: UInt32(payload.count).littleEndian, Array.init))
+        + payload
+}
+
+/// The DONE that ends a RECV stream is 8 bytes — sync_data sized, unlike a list DONE.
+private func recvDone() -> Data {
+    Data("DONE".utf8) + Data([0, 0, 0, 0])
+}
+
+private func scratchURL() -> URL {
+    URL(fileURLWithPath: NSTemporaryDirectory())
+        .appendingPathComponent("conduit-test-\(UUID().uuidString).bin")
+}
+
+@Test("pull writes every chunk to disk in order")
+func pullsFile() async throws {
+    let destination = scratchURL()
+    defer { try? FileManager.default.removeItem(at: destination) }
+
+    let stream = FakeADBServer(script: [
+        dataFrame(Data("hello ".utf8)),
+        dataFrame(Data("world".utf8)),
+        recvDone(),
+    ])
+    let written = try await SyncSession(stream: stream).pull("/sdcard/a.txt", to: destination)
+
+    #expect(written == 11)
+    #expect(try String(contentsOf: destination, encoding: .utf8) == "hello world")
+}
+
+@Test("pull reports cumulative progress, not per-chunk deltas")
+func pullReportsProgress() async throws {
+    let destination = scratchURL()
+    defer { try? FileManager.default.removeItem(at: destination) }
+
+    let stream = FakeADBServer(script: [
+        dataFrame(Data(repeating: 0x41, count: 100)),
+        dataFrame(Data(repeating: 0x42, count: 50)),
+        recvDone(),
+    ])
+    let counts = Box<[Int64]>([])
+    _ = try await SyncSession(stream: stream).pull("/sdcard/a.bin", to: destination) { total in
+        counts.withLock { $0.append(total) }
+    }
+    #expect(counts.withLock { $0 } == [100, 150])
+}
+
+@Test("a zero-byte file pulls successfully")
+func pullsEmptyFile() async throws {
+    let destination = scratchURL()
+    defer { try? FileManager.default.removeItem(at: destination) }
+
+    let stream = FakeADBServer(script: [recvDone()])
+    let written = try await SyncSession(stream: stream).pull("/sdcard/empty", to: destination)
+    #expect(written == 0)
+    #expect(FileManager.default.fileExists(atPath: destination.path))
+}
+
+@Test("a FAIL mid-pull deletes the partial file rather than leaving it truncated")
+func pullCleansUpPartialFile() async throws {
+    let destination = scratchURL()
+    defer { try? FileManager.default.removeItem(at: destination) }
+
+    let stream = FakeADBServer(script: [
+        dataFrame(Data(repeating: 0x41, count: 64)),
+        syncFail("Permission denied"),
+    ])
+    await #expect(throws: ADBError.self) {
+        _ = try await SyncSession(stream: stream).pull("/sdcard/a.bin", to: destination)
+    }
+    #expect(!FileManager.default.fileExists(atPath: destination.path),
+            "a partial file must never survive a failed pull")
+}
+
+// MARK: - Push
+
+/// A sync_status reply: opcode plus a UInt32.
+private func syncOkay() -> Data { Data("OKAY".utf8) + Data([0, 0, 0, 0]) }
+
+@Test("push sends the path with its mode, then the file in DATA chunks")
+func pushesFile() async throws {
+    let source = scratchURL()
+    try Data("hello world".utf8).write(to: source)
+    defer { try? FileManager.default.removeItem(at: source) }
+
+    let stream = FakeADBServer(script: [syncOkay()])
+    let sent = try await SyncSession(stream: stream).push(source, to: "/sdcard/a.txt", mode: 0o644)
+
+    #expect(sent == 11)
+
+    let written = String(decoding: stream.writtenBytes, as: UTF8.self)
+    #expect(written.hasPrefix("SEND"))
+    #expect(written.contains("/sdcard/a.txt,644"))
+    #expect(written.contains("hello world"))
+}
+
+@Test("push splits a file larger than the 64 KB maximum into several chunks")
+func pushesLargeFileInChunks() async throws {
+    let source = scratchURL()
+    try Data(repeating: 0x41, count: 70_000).write(to: source)
+    defer { try? FileManager.default.removeItem(at: source) }
+
+    let stream = FakeADBServer(script: [syncOkay()])
+    let sent = try await SyncSession(stream: stream).push(source, to: "/sdcard/big.bin")
+
+    #expect(sent == 70_000)
+
+    // 70,000 bytes is 65,536 + 4,464, so exactly two DATA writes plus the
+    // SEND request and the trailing DONE.
+    let dataWrites = stream.written.filter { $0.prefix(4) == Data("DATA".utf8) }
+    #expect(dataWrites.count == 2)
+    #expect(dataWrites[0].count == 4 + 4 + 65_536)
+    #expect(dataWrites[1].count == 4 + 4 + 4_464)
+}
+
+@Test("push reports a FAIL from the device")
+func pushReportsFailure() async throws {
+    let source = scratchURL()
+    try Data("x".utf8).write(to: source)
+    defer { try? FileManager.default.removeItem(at: source) }
+
+    let stream = FakeADBServer(script: [syncFail("No space left on device")])
+    await #expect(throws: ADBError.self) {
+        _ = try await SyncSession(stream: stream).push(source, to: "/sdcard/x.txt")
+    }
+}

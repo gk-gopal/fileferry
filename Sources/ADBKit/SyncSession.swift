@@ -79,3 +79,103 @@ public final class SyncSession: Sendable {
         return String(decoding: try await stream.read(exactly: Int(length)), as: UTF8.self)
     }
 }
+
+// MARK: - Transfers
+
+extension SyncSession {
+    /// Streams a remote file to disk.
+    ///
+    /// - Parameter onProgress: called with the *cumulative* byte count after
+    ///   each chunk. Callers coalesce this before touching the UI — a fast
+    ///   transfer produces thousands of calls per second.
+    /// - Returns: total bytes written.
+    @discardableResult
+    public func pull(
+        _ remotePath: String,
+        to destination: URL,
+        onProgress: @Sendable (Int64) -> Void = { _ in }
+    ) async throws -> Int64 {
+        try await stream.write(SyncPacket.request(.recv, path: remotePath))
+
+        FileManager.default.createFile(atPath: destination.path, contents: nil)
+        let handle = try FileHandle(forWritingTo: destination)
+        var total: Int64 = 0
+        var succeeded = false
+        defer {
+            try? handle.close()
+            // Spec §7 rule 3: no truncated files survive a failed transfer.
+            if !succeeded { try? FileManager.default.removeItem(at: destination) }
+        }
+
+        while true {
+            let opcode = String(decoding: try await stream.read(exactly: 4), as: UTF8.self)
+            switch opcode {
+            case SyncOpcode.data.rawValue:
+                let length = Int(try await readUInt32())
+                guard length <= SyncSession.maxChunk else {
+                    throw ADBError.malformedResponse(
+                        "chunk of \(length) bytes exceeds the 64 KB maximum")
+                }
+                let chunk = try await stream.read(exactly: length)
+                try handle.write(contentsOf: chunk)
+                total += Int64(length)
+                onProgress(total)
+            case SyncOpcode.done.rawValue:
+                // RECV's DONE is sync_data sized — 8 bytes total, unlike the
+                // dent-sized DONE that terminates a listing.
+                _ = try await readUInt32()
+                succeeded = true
+                return total
+            case SyncOpcode.fail.rawValue:
+                throw ADBError.transferFailed(
+                    path: remotePath, reason: try await readSyncMessage())
+            default:
+                throw ADBError.malformedResponse("unexpected sync opcode \(opcode) during pull")
+            }
+        }
+    }
+
+    /// Streams a local file to the device.
+    ///
+    /// The SEND request carries "<path>,<octal mode>" as a single string — a
+    /// quirk of the sync protocol worth remembering when debugging.
+    @discardableResult
+    public func push(
+        _ source: URL,
+        to remotePath: String,
+        mode: UInt32 = 0o644,
+        onProgress: @Sendable (Int64) -> Void = { _ in }
+    ) async throws -> Int64 {
+        let handle = try FileHandle(forReadingFrom: source)
+        defer { try? handle.close() }
+
+        let target = "\(remotePath),\(String(mode, radix: 8))"
+        try await stream.write(SyncPacket.request(.send, path: target))
+
+        var total: Int64 = 0
+        while true {
+            let chunk = try handle.read(upToCount: SyncSession.maxChunk) ?? Data()
+            guard !chunk.isEmpty else { break }
+            try await stream.write(
+                SyncPacket(.data, value: UInt32(chunk.count)).encoded() + chunk)
+            total += Int64(chunk.count)
+            onProgress(total)
+        }
+
+        let mtime = (try? source.resourceValues(forKeys: [.contentModificationDateKey])
+            .contentModificationDate) ?? Date()
+        try await stream.write(
+            SyncPacket(.done, value: UInt32(mtime.timeIntervalSince1970)).encoded())
+
+        let opcode = String(decoding: try await stream.read(exactly: 4), as: UTF8.self)
+        switch opcode {
+        case SyncOpcode.okay.rawValue:
+            _ = try await readUInt32()
+            return total
+        case SyncOpcode.fail.rawValue:
+            throw ADBError.transferFailed(path: remotePath, reason: try await readSyncMessage())
+        default:
+            throw ADBError.malformedResponse("unexpected sync opcode \(opcode) after push")
+        }
+    }
+}
