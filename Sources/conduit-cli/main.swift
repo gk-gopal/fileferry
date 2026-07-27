@@ -25,9 +25,24 @@ func note(_ message: String) {
     FileHandle.standardError.write(Data((message + "\n").utf8))
 }
 
+/// True when stderr is a terminal. Carriage-return progress only overwrites
+/// on a TTY; piped into a file it produces one line per chunk, which for a
+/// 5 GB transfer is 80,000 lines of noise.
+let stderrIsTerminal = isatty(FileHandle.standardError.fileDescriptor) == 1
+
 /// Reprints a single progress line. `total` may be 0 when the size is unknown.
+/// Rate-limited to ~10 Hz, matching the coalescing the app will do before
+/// touching the UI.
+nonisolated(unsafe) var lastProgressAt = Date.distantPast
+
 func showProgress(done: Int64, total: Int64, since start: Date) {
-    let elapsed = max(Date().timeIntervalSince(start), 0.001)
+    guard stderrIsTerminal else { return }
+    let now = Date()
+    let isFinal = total > 0 && done >= total
+    guard isFinal || now.timeIntervalSince(lastProgressAt) >= 0.1 else { return }
+    lastProgressAt = now
+
+    let elapsed = max(now.timeIntervalSince(start), 0.001)
     let rate = Double(done) / elapsed
     let percent = total > 0 ? " \(Int(Double(done) / Double(total) * 100))%" : ""
     let line = "\r\(humanBytes(done))\(percent) · \(humanBytes(Int64(rate)))/s    "
@@ -37,11 +52,16 @@ func showProgress(done: Int64, total: Int64, since start: Date) {
 let arguments = Array(CommandLine.arguments.dropFirst())
 guard let command = arguments.first else { usage() }
 
-let binary = try ADBBinary.resolve()
+let binary: ADBBinary
+do {
+    binary = try ADBBinary.resolve()
+} catch {
+    note((error as? LocalizedError)?.errorDescription ?? "\(error)")
+    exit(1)
+}
 note("using adb \(binary.version) at \(binary.url.path)")
 
 let server = ADBServer(binary: binary)
-try await server.ensureRunning()
 
 /// Returns the first connected, authorized device, explaining what is wrong
 /// when there isn't one.
@@ -69,6 +89,9 @@ func firstReadyDevice() async throws -> String {
     throw ADBError.deviceNotFound("no authorized device")
 }
 
+/// Dispatch, wrapped so a protocol or device error prints a sentence rather
+/// than trapping with a Swift fatal error.
+func run() async throws {
 switch command {
 case "devices":
     var iterator = DeviceTracker(server: server).devices().makeAsyncIterator()
@@ -132,4 +155,13 @@ case "df":
 
 default:
     usage()
+}
+}
+
+do {
+    try await server.ensureRunning()
+    try await run()
+} catch {
+    note("\n" + ((error as? LocalizedError)?.errorDescription ?? "\(error)"))
+    exit(1)
 }

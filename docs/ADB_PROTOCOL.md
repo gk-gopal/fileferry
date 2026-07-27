@@ -117,10 +117,52 @@ then the payload.
 
 ## Measured performance
 
-Directory listing time and transfer throughput against real hardware are
-recorded here once Task 12 of the foundation plan runs. The numbers matter:
-they are the evidence for choosing ADB over MTP, and belong in the README
-rather than in an argument.
+Measured 2026-07-27 with `conduit-cli` built in release mode. Host: macOS 26,
+Apple Silicon. Device: OnePlus CPH2585, adb 37.0.1.
+
+### Directory listing
+
+| Path | Entries | Time | Per entry |
+|---|---:|---:|---:|
+| `/sdcard` | 24 | 32 ms | 1.3 ms |
+| `/sdcard/Pictures` | 112 | 68 ms | 0.61 ms |
+| `/sdcard/Download` | 294 | 140 ms | 0.48 ms |
+| `/sdcard/Android/data` | 481 | 219 ms | 0.46 ms |
+| `/sdcard/DCIM/Camera` | 871 | 414 ms | 0.48 ms |
+
+Cost is linear at roughly **0.5 ms per entry**, with a small fixed overhead
+that dominates for tiny directories. Extrapolating, a 10,000-entry camera roll
+lands near 5 seconds — worth revisiting with incremental rendering in the UI,
+since `LIS2` streams entries and the table could populate as they arrive rather
+than waiting for `DONE`.
+
+### Transfer
+
+A 5 GiB file (5,368,709,120 bytes), round-tripped:
+
+| Direction | Time | Throughput |
+|---|---:|---:|
+| Push (Mac → phone) | 162.5 s | 33 MB/s |
+| Pull (phone → Mac) | 126.4 s | 42.5 MB/s |
+
+`cmp` confirmed the returned file byte-identical to the original. These rates
+are consistent with a USB 2.0 link rather than any limit in this code; a USB 3
+cable and port should go considerably higher.
+
+**The 64-bit size path is confirmed on hardware.** The device reported the file
+as 5.37 GB. A v1 opcode would have wrapped it to 1.07 GB
+(`5,368,709,120 − 2³²`).
+
+## Behaviours found on hardware
+
+- **An inaccessible directory lists as empty, not as an error.** `LIS2` on
+  `/data/data` returns zero entries and `DONE` rather than `FAIL`, because the
+  `shell` user cannot read it. An empty directory and a forbidden one are
+  therefore indistinguishable over this protocol. The UI must not present
+  "0 items" as authoritative for paths outside `/sdcard`.
+- **Non-ASCII filenames work end to end.** A Tamil filename in
+  `/sdcard/Download` round-tripped correctly, which exercises the UTF-8 byte
+  counting in both framing layers.
 
 ## Toolchain note
 
