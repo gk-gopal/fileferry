@@ -3,6 +3,7 @@ import AppKit
 
 struct SettingsView: View {
     @Bindable var preferences: Preferences
+    @State private var cacheSize: Int64 = 0
 
     var body: some View {
         TabView {
@@ -33,8 +34,24 @@ struct SettingsView: View {
             Text("Previewing a phone file has to fetch it over USB. Larger files offer a button instead of transferring automatically.")
                 .font(.caption).foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
+
+            LabeledContent("Preview cache") {
+                HStack {
+                    Text(ByteCountFormatter.string(fromByteCount: cacheSize, countStyle: .file))
+                        .foregroundStyle(.secondary).monospacedDigit()
+                    Button("Clear") {
+                        PreviewCache.clear()
+                        cacheSize = PreviewCache.size()
+                    }
+                    .disabled(cacheSize == 0)
+                }
+            }
+            Text("Previewing a file on the phone copies it to this Mac so Quick Look can render it. Those copies stay cached until cleared. Nothing is ever uploaded anywhere.")
+                .font(.caption).foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
         }
         .formStyle(.grouped)
+        .onAppear { cacheSize = PreviewCache.size() }
     }
 
     private var transfers: some View {

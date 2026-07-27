@@ -15,6 +15,26 @@ enum PreviewCache {
         return base
     }()
 
+    /// Total bytes currently cached. Worth surfacing: these are copies of
+    /// files pulled off the phone, sitting on the Mac.
+    static func size() -> Int64 {
+        guard let contents = try? FileManager.default.contentsOfDirectory(
+            at: directory, includingPropertiesForKeys: [.fileSizeKey]
+        ) else { return 0 }
+        return contents.reduce(0) { total, url in
+            total + Int64((try? url.resourceValues(forKeys: [.fileSizeKey]))?.fileSize ?? 0)
+        }
+    }
+
+    static func clear() {
+        guard let contents = try? FileManager.default.contentsOfDirectory(
+            at: directory, includingPropertiesForKeys: nil
+        ) else { return }
+        for url in contents {
+            try? FileManager.default.removeItem(at: url)
+        }
+    }
+
     static func url(forRemote path: String, size: Int64, mtime: Date) -> URL {
         let stamp = Int(mtime.timeIntervalSince1970)
         let key = "\(abs(path.hashValue))-\(size)-\(stamp)"
