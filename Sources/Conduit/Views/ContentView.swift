@@ -9,7 +9,7 @@ struct ContentView: View {
     var body: some View {
         VStack(spacing: 0) {
             HStack(spacing: 0) {
-                PaneView(pane: model.macPane, sidebarVisible: $macSidebar)
+                PaneView(pane: model.macPane, model: model, sidebarVisible: $macSidebar)
                     .frame(minWidth: 280)
 
                 Divider()
@@ -18,7 +18,7 @@ struct ContentView: View {
 
                 Group {
                     if let phone = model.phonePane {
-                        PaneView(pane: phone, sidebarVisible: $phoneSidebar)
+                        PaneView(pane: phone, model: model, sidebarVisible: $phoneSidebar)
                     } else {
                         ConnectionStateView(model: model)
                     }

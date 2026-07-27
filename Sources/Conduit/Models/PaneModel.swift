@@ -26,6 +26,14 @@ final class PaneModel {
     var errorMessage: String?
     var freeSpace: Int64?
     var totalSpace: Int64?
+    var sortOrder: [KeyPathComparator<DeviceEntry>] = [
+        KeyPathComparator(\DeviceEntry.name, order: .forward)
+    ]
+
+    /// Drag payloads for phone paths are carried as plain strings behind this
+    /// scheme. Using a custom UTType would mean declaring an exported type in
+    /// Info.plist; this needs no registration and is just as unambiguous.
+    static let phoneDragPrefix = "conduit-phone://"
 
     private var backStack: [String] = []
     private var forwardStack: [String] = []
@@ -63,6 +71,40 @@ final class PaneModel {
 
     var selectedEntries: [DeviceEntry] {
         entries.filter { selection.contains($0.path) }
+    }
+
+    /// Folders first, then the user's chosen column — the convention every
+    /// file manager follows, and sorting purely by name would bury them.
+    var sortedEntries: [DeviceEntry] {
+        entries.sorted { lhs, rhs in
+            if lhs.isDirectory != rhs.isDirectory { return lhs.isDirectory }
+            for comparator in sortOrder {
+                switch comparator.compare(lhs, rhs) {
+                case .orderedAscending: return true
+                case .orderedDescending: return false
+                case .orderedSame: continue
+                }
+            }
+            return false
+        }
+    }
+
+    /// Wraps a path for dragging out of this pane.
+    func dragPayload(for entry: DeviceEntry) -> String {
+        isPhone ? PaneModel.phoneDragPrefix + entry.path : entry.path
+    }
+
+    func createFolder(named name: String) async throws {
+        let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty, !trimmed.contains("/") else {
+            throw TransportError.io("\"\(name)\" isn't a usable folder name.")
+        }
+        let target = path.hasSuffix("/") ? path + trimmed : path + "/" + trimmed
+        if await transport.exists(target) {
+            throw TransportError.io("\"\(trimmed)\" already exists here.")
+        }
+        try await transport.mkdir(target)
+        await refresh()
     }
 
     func load() async {

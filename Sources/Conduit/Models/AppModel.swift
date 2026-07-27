@@ -157,12 +157,25 @@ final class AppModel {
         guard let phonePane, !isBusy else { return }
         let source = direction == .toPhone ? macPane : phonePane
         let destination = direction == .toPhone ? phonePane : macPane
-        let paths = source.selectedEntries.map(\.path)
-        guard !paths.isEmpty else { return }
+        transfer(
+            paths: source.selectedEntries.map(\.path),
+            from: source, to: destination, mode: mode)
+    }
+
+    /// The general form, also used by drag-and-drop, where the destination
+    /// directory may be a sidebar favourite rather than the pane's own path.
+    func transfer(
+        paths: [String],
+        from source: PaneModel,
+        to destination: PaneModel,
+        into directory: String? = nil,
+        mode: TransferMode = .copy
+    ) {
+        guard !isBusy, !paths.isEmpty else { return }
 
         let job = TransferJob(
             sources: paths,
-            destinationDirectory: destination.path,
+            destinationDirectory: directory ?? destination.path,
             mode: mode,
             conflictPolicy: .rename
         )
@@ -215,6 +228,87 @@ final class AppModel {
         transferTask?.cancel()
         transferTask = nil
         transfer = nil
+    }
+
+    // MARK: - Drag and drop
+
+    /// Resolves a dropped payload into (paths, originating pane).
+    /// Mac items travel as plain file paths; phone items carry a scheme prefix.
+    func resolveDrop(_ payloads: [String], onto destination: PaneModel) -> (paths: [String], source: PaneModel)? {
+        let phonePayloads = payloads.filter { $0.hasPrefix(PaneModel.phoneDragPrefix) }
+        let macPayloads = payloads.filter { !$0.hasPrefix(PaneModel.phoneDragPrefix) }
+
+        if !phonePayloads.isEmpty, let phonePane, !destination.isPhone {
+            return (phonePayloads.map { String($0.dropFirst(PaneModel.phoneDragPrefix.count)) }, phonePane)
+        }
+        if !macPayloads.isEmpty, destination.isPhone {
+            return (macPayloads, macPane)
+        }
+        return nil   // same-pane drop, or nothing usable
+    }
+
+    func handleDrop(_ payloads: [String], onto destination: PaneModel, directory: String? = nil) {
+        guard let resolved = resolveDrop(payloads, onto: destination) else { return }
+        transfer(
+            paths: resolved.paths,
+            from: resolved.source,
+            to: destination,
+            into: directory,
+            mode: .copy
+        )
+    }
+
+    // MARK: - Preview
+
+    var isPreparingPreview = false
+
+    /// Quick Look needs a real file, so phone items are fetched to a cache
+    /// first. Local files open straight away.
+    func preview(_ pane: PaneModel) {
+        let targets = pane.selectedEntries.filter { !$0.isDirectory }
+        guard !targets.isEmpty, !isPreparingPreview else { return }
+
+        guard pane.isPhone else {
+            QuickLookPreview.shared.show(targets.map { URL(fileURLWithPath: $0.path) })
+            return
+        }
+
+        isPreparingPreview = true
+        let transport = pane.transport
+        Task { @MainActor [self] in
+            defer { isPreparingPreview = false }
+            var urls: [URL] = []
+            let local = LocalTransport()
+            // Cap it: Quick Look on a 40-file selection would mean pulling all
+            // of them before showing anything.
+            for entry in targets.prefix(8) {
+                let cached = QuickLookPreview.cacheURL(
+                    forRemote: entry.path, size: entry.size, mtime: entry.mtime)
+                if !FileManager.default.fileExists(atPath: cached.path) {
+                    do {
+                        try await local.write(cached.path, from: transport.read(entry.path))
+                    } catch {
+                        alertMessage = (error as? LocalizedError)?.errorDescription ?? "\(error)"
+                        continue
+                    }
+                }
+                urls.append(cached)
+            }
+            guard !urls.isEmpty else { return }
+            QuickLookPreview.shared.show(urls)
+        }
+    }
+
+    // MARK: - New folder
+
+    func createFolder(named name: String, in pane: PaneModel) {
+        Task { @MainActor [self] in
+            do {
+                try await pane.createFolder(named: name)
+            } catch {
+                alertMessage = (error as? LocalizedError)?.errorDescription ?? "\(error)"
+            }
+        }
     }
 
     // MARK: - Destructive actions
