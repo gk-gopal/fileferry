@@ -39,7 +39,13 @@ MAJOR="$(sw_vers -productVersion | cut -d. -f1)"
 
 # --- get the disk image -----------------------------------------------------
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" 2>/dev/null && pwd || echo "")"
+# BASH_SOURCE is unset when the script is piped into bash, which trips `set -u`.
+SCRIPT_PATH="${BASH_SOURCE[0]:-}"
+if [ -n "$SCRIPT_PATH" ]; then
+  SCRIPT_DIR="$(cd "$(dirname "$SCRIPT_PATH")" 2>/dev/null && pwd || echo "")"
+else
+  SCRIPT_DIR=""
+fi
 
 if [ -n "$DMG" ]; then
   [ -f "$DMG" ] || die "No such file: $DMG"
