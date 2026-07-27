@@ -6,7 +6,7 @@ FileFerry talks to Android over ADB rather than MTP, which makes it dramatically
 faster on folders with many files — the case where Android File Transfer and
 other MTP-based tools slow to a crawl.
 
-**Status:** v0.2.0 — early, but working and verified against real hardware. A
+**Status:** v0.2.1 — early, but working and verified against real hardware. A
 5 GiB file round-trips byte-identical at 33–42 MB/s; 5,429 files (3.17 GB)
 copied at 37 MB/s with counts and byte totals matching the device exactly; an
 871-entry camera folder lists in 414 ms. See
