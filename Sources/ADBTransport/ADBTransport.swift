@@ -148,12 +148,22 @@ public struct ADBTransport: DeviceTransport {
         }
     }
 
+    /// Free space is a property of the volume, not of one path, so a
+    /// destination directory that does not exist yet must not fail preflight.
+    /// Walks up to the nearest ancestor `df` can answer for.
     public func freeSpace(at path: String) async throws -> Int64 {
-        let result = try await shell.run("df -k '\(escaped(path))'")
-        guard result.succeeded, let free = ShellSession.parseFreeSpace(result.stdout) else {
-            throw TransportError.io("Couldn't read free space at \(path)")
+        var candidate = path
+        while true {
+            let result = try await shell.run("df -k '\(escaped(candidate))'")
+            if result.succeeded, let free = ShellSession.parseFreeSpace(result.stdout) {
+                return free
+            }
+            let parent = (candidate as NSString).deletingLastPathComponent
+            guard parent != candidate, !parent.isEmpty, parent != "/" else {
+                throw TransportError.io("Couldn't read free space at \(path)")
+            }
+            candidate = parent
         }
-        return free
     }
 
     // MARK: - Paths

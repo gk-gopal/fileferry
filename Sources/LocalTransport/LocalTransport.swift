@@ -86,9 +86,22 @@ public struct LocalTransport: DeviceTransport {
         try FileManager.default.removeItem(atPath: path)
     }
 
+    /// Free space is a property of the volume, not of one path, so a
+    /// destination directory that does not exist yet must not fail preflight.
+    /// Walks up to the nearest existing ancestor.
     public func freeSpace(at path: String) async throws -> Int64 {
-        let values = try URL(fileURLWithPath: path)
-            .resourceValues(forKeys: [.volumeAvailableCapacityForImportantUsageKey])
-        return values.volumeAvailableCapacityForImportantUsage ?? Int64.max
+        var candidate = path
+        while true {
+            if FileManager.default.fileExists(atPath: candidate) {
+                let values = try URL(fileURLWithPath: candidate)
+                    .resourceValues(forKeys: [.volumeAvailableCapacityForImportantUsageKey])
+                return values.volumeAvailableCapacityForImportantUsage ?? Int64.max
+            }
+            let parent = (candidate as NSString).deletingLastPathComponent
+            guard parent != candidate, !parent.isEmpty else {
+                throw TransportError.notFound(path)
+            }
+            candidate = parent
+        }
     }
 }
